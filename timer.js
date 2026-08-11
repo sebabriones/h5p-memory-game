@@ -3,12 +3,12 @@
   /**
    * Adapter between memory game and H5P.Timer
    *
-   * @class H5P.MemoryGame.Timer
+   * @class H5P.MemoryGameCFRD.Timer
    * @extends H5P.Timer
    * @param {Element} element
    */
   MemoryGame.Timer = function (element, startValue = 0) {
-    /** @alias H5P.MemoryGame.Timer# */
+    /** @alias H5P.MemoryGameCFRD.Timer# */
     var self = this;
 
     // Initialize event inheritance
@@ -62,4 +62,4 @@
   MemoryGame.Timer.prototype = Object.create(Timer.prototype);
   MemoryGame.Timer.prototype.constructor = MemoryGame.Timer;
 
-})(H5P.MemoryGame, H5P.Timer);
+})(H5P.MemoryGameCFRD, H5P.Timer);

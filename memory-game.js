@@ -1,4 +1,4 @@
-H5P.MemoryGame = (function (EventDispatcher, $) {
+H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
 
   // We don't want to go smaller than 100px per card(including the required margin)
   var CARD_MIN_SIZE = 100; // PX
@@ -7,10 +7,95 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
   var LIST_PADDING = 1; // EMs
   var numInstances = 0;
 
+  function isTruthy(value) {
+    return value === true || value === 1 || value === "1" || value === "true";
+  }
+
+  function getInstructionsOptions(instance) {
+    var instructions = instance && instance.parameters && instance.parameters.instructions;
+    var text;
+
+    if (!instructions || !isTruthy(instructions.enabled)) {
+      return null;
+    }
+
+    text =
+      instructions.text === undefined || instructions.text === null
+        ? ""
+        : String(instructions.text).trim();
+
+    if (!text) {
+      return null;
+    }
+
+    return {
+      id: instance.contentId || instance.id,
+      text: text,
+      displayMode: instructions.displayMode || "both",
+      introButtonLabel: instructions.introButtonLabel || "Start",
+      tabButtonLabel: instructions.tabButtonLabel || "Instructions",
+      appearance: $.extend(true, {}, instructions.appearance || {}),
+      animation: $.extend(true, {}, instructions.animation || {}),
+      startCollapsed:
+        instructions.startCollapsed === undefined
+          ? true
+          : isTruthy(instructions.startCollapsed)
+    };
+  }
+
+  function scheduleInstructionsAttach(instance) {
+    [0, 200, 500].forEach(function (delay) {
+      setTimeout(function () {
+        var instructions = getInstructionsOptions(instance);
+        var $target =
+          instance.$playArea && instance.$playArea.length
+            ? instance.$playArea
+            : instance.$container;
+        var attached;
+
+        if (!instructions || !$target || !$target.length) {
+          return;
+        }
+
+        if (
+          $target.find(".h5p-instructions-root").length ||
+          ($target.parent().length &&
+            $target.parent().children(".h5p-instructions-root").length)
+        ) {
+          instance.trigger("resize");
+          return;
+        }
+
+        if (H5P.Instructions && typeof H5P.Instructions.attach === "function") {
+          attached = H5P.Instructions.attach($target, instructions);
+          if (attached) {
+            instance.trigger("resize");
+          }
+        }
+      }, delay);
+    });
+  }
+
+  function refreshInstructionsScale(instance) {
+    var instructions = getInstructionsOptions(instance);
+    var $target =
+      instance.$playArea && instance.$playArea.length
+        ? instance.$playArea
+        : instance.$container;
+
+    if (!instructions || !$target || !$target.length) {
+      return;
+    }
+
+    if (H5P.Instructions && typeof H5P.Instructions.updateScale === "function") {
+      H5P.Instructions.updateScale($target, instructions);
+    }
+  }
+
   /**
    * Memory Game Constructor
    *
-   * @class H5P.MemoryGame
+   * @class H5P.MemoryGameCFRD
    * @extends H5P.EventDispatcher
    * @param {Object} parameters
    * @param {Number} id
@@ -18,15 +103,18 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
    * @param {object} [extras.previousState] The previous state of the game
    */
   function MemoryGame(parameters, id, extras) {
-    /** @alias H5P.MemoryGame# */
+    /** @alias H5P.MemoryGameCFRD# */
     var self = this;
 
     this.previousState = extras.previousState ?? {};
+    this.parameters = parameters || {};
+    this.contentId = id;
+    this.id = id;
 
     // Initialize event inheritance
     EventDispatcher.call(self);
 
-    var flipped, timer, counter, popup, $bottom, $feedback, $wrapper, maxWidth, numCols, audioCard;
+    var flipped, timer, counter, popup, $bottom, $feedback, $wrapper, $playArea, maxWidth, maxHeight, numCols, audioCard;
     var cards = [];
     var score = 0;
     numInstances++;
@@ -70,9 +158,9 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
      * Check if these two cards belongs together.
      *
      * @private
-     * @param {H5P.MemoryGame.Card} card
-     * @param {H5P.MemoryGame.Card} mate
-     * @param {H5P.MemoryGame.Card} correct
+     * @param {H5P.MemoryGameCFRD.Card} card
+     * @param {H5P.MemoryGameCFRD.Card} mate
+     * @param {H5P.MemoryGameCFRD.Card} correct
      */
     var check = function (card, mate, correct) {
       if (mate !== correct) {
@@ -138,7 +226,7 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
           removeRetryButton();
           self.resetTask(true);
         });
-        self.retryButton.style.fontSize = (parseFloat($wrapper.children('ul')[0].style.fontSize) * 0.75) + 'px';
+        self.retryButton.style.fontSize = (parseFloat(($playArea && $playArea.length ? $playArea : $wrapper).children('ul')[0].style.fontSize) * 0.75) + 'px';
         
         const retryModal = document.createElement('div');
         retryModal.setAttribute('role', 'dialog');
@@ -208,8 +296,10 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
         }
 
         // Scale new layout
-        $wrapper.children('ul').children('.h5p-row-break').removeClass('h5p-row-break');
+        var $listRoot = ($playArea && $playArea.length ? $playArea : $wrapper).children('ul');
+        $listRoot.children('.h5p-row-break').removeClass('h5p-row-break');
         maxWidth = -1;
+        maxHeight = -1;
         self.trigger('resize');
         moveFocus && cards[0].setFocus();
         if (self.retryButton) {
@@ -233,7 +323,7 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
     /**
      * Flip back all cards unless pair found or excluded.
      * @param {object} [params] Parameters.
-     * @param {H5P.MemoryGame.Card[]} [params.excluded] Cards to exclude from flip back.
+     * @param {H5P.MemoryGameCFRD.Card[]} [params.excluded] Cards to exclude from flip back.
      * @param {boolean} [params.keepPairs] True to keep pairs that were found.
      */
     var flipBackCards = (params = {}) => {
@@ -261,8 +351,8 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
 
     /**
      * Get mate of a card.
-     * @param {H5P.MemoryGame.Card} card Card.
-     * @returns {H5P.MemoryGame.Card} Mate of the card.
+     * @param {H5P.MemoryGameCFRD.Card} card Card.
+     * @returns {H5P.MemoryGameCFRD.Card} Mate of the card.
      * @private
      */
     var getCardMate = (card) => {
@@ -281,8 +371,8 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
      * Adds card to card list and set up a flip listener.
      *
      * @private
-     * @param {H5P.MemoryGame.Card} card
-     * @param {H5P.MemoryGame.Card} mate
+     * @param {H5P.MemoryGameCFRD.Card} card
+     * @param {H5P.MemoryGameCFRD.Card} mate
      */
     var addCard = function (card, mate) {
       card.on('flip', (event) => {
@@ -586,8 +676,6 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
       const $foo = $('<div/>')
         .text('No card was added to the memory game!')
         .appendTo($list);
-
-      $list.appendTo($wrapper);
     }
 
     /**
@@ -599,17 +687,23 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
       this.triggerXAPI('attempted');
 
       // TODO: Only create on first attach!
-      $wrapper = $container.addClass('h5p-memory-game').html('');
+      $wrapper = $container.addClass('h5p-memory-game-cfrd').html('');
+      $playArea = $('<div/>', {
+        'class': 'h5p-mg-play-area'
+      }).appendTo($wrapper);
+      self.$container = $wrapper;
+      self.$playArea = $playArea;
+
       if (invertShades === -1) {
         $container.addClass('h5p-invert-shades');
       }
 
       if (cards.length) {
-        $applicationLabel.appendTo($wrapper);
-        $list.appendTo($wrapper);
-        $bottom.appendTo($wrapper);
-        popup.appendTo($wrapper);
-        $wrapper.append(ariaLiveRegion.getDOM());
+        $applicationLabel.appendTo($playArea);
+        $list.appendTo($playArea);
+        $bottom.appendTo($playArea);
+        popup.appendTo($playArea);
+        $playArea.append(ariaLiveRegion.getDOM());
         $wrapper.click(function (e) {
           if (!popup.getElement()?.contains(e.target)) {
             popup.close();
@@ -617,8 +711,10 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
         });
       }
       else {
-        $list.appendTo($wrapper);
+        $list.appendTo($playArea);
       }
+
+      scheduleInstructionsAttach(self);
 
       // resize to scale game size and check for finished game afterwards
       this.trigger('resize');
@@ -645,20 +741,33 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
      * Will try to scale the game so that it fits within its container.
      * Puts the cards into a grid layout to make it as square as possible –
      * which improves the playability on multiple devices.
+     * Scales by both width and height so the grid fits the 16:9 play area
+     * without scrolling (fullscreen covers very dense layouts).
      *
      * @private
      */
     var scaleGameSize = function () {
-      // Check how much space we have available
-      var $list = $wrapper.children('ul');
+      // Card face 6.25em + horizontal/vertical margins from CSS
+      var CARD_CELL_WIDTH_EM = 7.25;
+      var CARD_CELL_HEIGHT_EM = 7.75;
+      var LIST_PAD_Y_EM = 0.5;
 
-      var newMaxWidth = parseFloat(window.getComputedStyle($list[0]).width);
-      if (maxWidth === newMaxWidth) {
+      // Check how much space we have available inside the 16:9 play area
+      var $listParent = $playArea && $playArea.length ? $playArea : $wrapper;
+      var $list = $listParent.children('ul');
+      if (!$list.length || !$list[0]) {
+        return;
+      }
+
+      var listEl = $list[0];
+      var newMaxWidth = listEl.clientWidth;
+      var newMaxHeight = listEl.clientHeight;
+      if (maxWidth === newMaxWidth && maxHeight === newMaxHeight) {
         return; // Same size, no need to recalculate
       }
-      else {
-        maxWidth = newMaxWidth;
-      }
+
+      maxWidth = newMaxWidth;
+      maxHeight = newMaxHeight;
 
       // Get the card holders
       var $elements = $list.children();
@@ -671,6 +780,9 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
 
       // Do not exceed the max number of columns
       var maxCols = Math.floor(maxWidth / CARD_MIN_SIZE);
+      if (maxCols < 1) {
+        maxCols = 1;
+      }
       if (newNumCols > maxCols) {
         newNumCols = maxCols;
       }
@@ -691,12 +803,28 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
       var onePercentage = ((CARD_STD_SIZE * numCols) + STD_FONT_SIZE) / 100;
       var paddingSize = (STD_FONT_SIZE * LIST_PADDING) / onePercentage;
       var cardSize = (100 - paddingSize) / numCols;
-      var fontSize = (((maxWidth * (cardSize / 100)) * STD_FONT_SIZE) / CARD_STD_SIZE);
+      var fontSizeFromWidth = (((maxWidth * (cardSize / 100)) * STD_FONT_SIZE) / CARD_STD_SIZE);
+
+      // Constrain by available height so the square grid fits in 16:9 without scroll
+      var numRows = Math.ceil($elements.length / numCols);
+      var heightInEm = (numRows * CARD_CELL_HEIGHT_EM) + LIST_PAD_Y_EM;
+      var fontSizeFromHeight = maxHeight > 0 ? (maxHeight / heightInEm) : fontSizeFromWidth;
+      var widthInEm = (numCols * CARD_CELL_WIDTH_EM) + LIST_PADDING;
+      var fontSizeFromCellWidth = maxWidth > 0 ? (maxWidth / widthInEm) : fontSizeFromWidth;
+
+      var fontSize = Math.min(fontSizeFromWidth, fontSizeFromHeight, fontSizeFromCellWidth);
+      if (!(fontSize > 0) || isNaN(fontSize)) {
+        fontSize = STD_FONT_SIZE;
+      }
+      // Keep a usable minimum; very dense boards stay readable via fullscreen
+      fontSize = Math.max(8, fontSize);
 
       // We use font size to evenly scale all parts of the cards.
       $list.css('font-size', fontSize + 'px');
       popup.setSize(fontSize);
       // due to rounding errors in browsers the margins may vary a bit…
+
+      refreshInstructionsScale(self);
     };
 
     /**
@@ -745,8 +873,16 @@ H5P.MemoryGame = (function (EventDispatcher, $) {
       self.on('resize', () => {
         scaleGameSize();
         if (self.retryButton) {
-          self.retryButton.style.fontSize = (parseFloat($wrapper.children('ul')[0].style.fontSize) * 0.75) + 'px';
+          var $ul = ($playArea && $playArea.length ? $playArea : $wrapper).children('ul');
+          if ($ul.length && $ul[0].style.fontSize) {
+            self.retryButton.style.fontSize = (parseFloat($ul[0].style.fontSize) * 0.75) + 'px';
+          }
         }
+      });
+    }
+    else {
+      self.on('resize', () => {
+        refreshInstructionsScale(self);
       });
     }
 

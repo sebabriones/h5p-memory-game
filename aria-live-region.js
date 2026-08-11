@@ -3,7 +3,7 @@
   /**
    * Aria live region for reading to screen reader.
    *
-   * @class H5P.MemoryGame.Popup
+   * @class H5P.MemoryGameCFRD.Popup
    */
   MemoryGame.AriaLiveRegion = function () {
 
@@ -78,4 +78,4 @@
     }
   }
 
-})(H5P.MemoryGame);
+})(H5P.MemoryGameCFRD);

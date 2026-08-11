@@ -4,7 +4,7 @@
    * A dialog for reading the description of a card.
    * @see https://www.w3.org/WAI/ARIA/apg/patterns/dialogmodal/
    *
-   * @class H5P.MemoryGame.Popup
+   * @class H5P.MemoryGameCFRD.Popup
    * @extends H5P.EventDispatcher
    * @param {Object.<string, string>} l10n
    */
@@ -12,7 +12,7 @@
     // Initialize event inheritance
     EventDispatcher.call(this);
 
-    /** @alias H5P.MemoryGame.Popup# */
+    /** @alias H5P.MemoryGameCFRD.Popup# */
     var self = this;
 
     var closed;
@@ -123,4 +123,4 @@
     }
   };
 
-})(H5P.MemoryGame, H5P.EventDispatcher, H5P.jQuery);
+})(H5P.MemoryGameCFRD, H5P.EventDispatcher, H5P.jQuery);

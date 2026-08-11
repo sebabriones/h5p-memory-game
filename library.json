@@ -1,13 +1,21 @@
 {
-  "title": "Memory Game",
+  "title": "Memory Game (CFRD)",
   "description": "See how many cards you can remember!",
+  "contentType": "Game",
   "majorVersion": 1,
-  "minorVersion": 3,
-  "patchVersion": 29,
+  "minorVersion": 0,
+  "patchVersion": 2,
   "runnable": 1,
-  "author": "Joubel",
+  "author": "sbriones (CFRD-UDEC), pmasquiaran (CFRD-UDEC)",
   "license": "MIT",
-  "machineName": "H5P.MemoryGame",
+  "machineName": "H5P.MemoryGameCFRD",
+  "coreApi": {
+    "majorVersion": 1,
+    "minorVersion": 23
+  },
+  "embedTypes": [
+    "iframe"
+  ],
   "preloadedCss": [
     {
       "path": "memory-game.css"
@@ -43,6 +51,11 @@
       "machineName": "FontAwesome",
       "majorVersion": 4,
       "minorVersion": 5
+    },
+    {
+      "machineName": "H5P.Instructions",
+      "majorVersion": 1,
+      "minorVersion": 0
     }
   ],
   "editorDependencies": [
@@ -60,6 +73,12 @@
       "machineName": "H5PEditor.AudioRecorder",
       "majorVersion": 1,
       "minorVersion": 0
+    },
+    {
+      "machineName": "H5PEditor.ShowWhen",
+      "majorVersion": 1,
+      "minorVersion": 0
     }
-  ]
+  ],
+  "upgradesScript": "upgrades.js"
 }

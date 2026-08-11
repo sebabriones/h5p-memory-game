@@ -10,7 +10,7 @@
   /**
    * Controls all the operations for each card.
    *
-   * @class H5P.MemoryGame.Card
+   * @class H5P.MemoryGameCFRD.Card
    * @extends H5P.EventDispatcher
    * @param {Object} image
    * @param {number} contentId
@@ -22,7 +22,7 @@
    * @param {string} id Unique identifier for card including original+match info.
    */
   MemoryGame.Card = function (image, contentId, cardsTotal, alt, l10n, description, styles, audio, id) {
-    /** @alias H5P.MemoryGame.Card# */
+    /** @alias H5P.MemoryGameCFRD.Card# */
     var self = this;
 
     this.id = id;
@@ -575,4 +575,4 @@
     return newColor;
   };
 
-})(H5P.MemoryGame, H5P.EventDispatcher, H5P.jQuery);
+})(H5P.MemoryGameCFRD, H5P.EventDispatcher, H5P.jQuery);

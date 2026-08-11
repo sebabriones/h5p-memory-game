@@ -3,11 +3,11 @@
   /**
    * Keeps track of the number of cards that has been turned
    *
-   * @class H5P.MemoryGame.Counter
+   * @class H5P.MemoryGameCFRD.Counter
    * @param {H5P.jQuery} $container
    */
   MemoryGame.Counter = function ($container, startValue = 0) {
-    /** @alias H5P.MemoryGame.Counter# */
+    /** @alias H5P.MemoryGameCFRD.Counter# */
     var self = this;
 
     var current = startValue;
@@ -46,4 +46,4 @@
     self.update();
   };
 
-})(H5P.MemoryGame);
+})(H5P.MemoryGameCFRD);

@@ -1,6 +1,6 @@
 var H5PUpgrades = H5PUpgrades || {};
 
-H5PUpgrades['H5P.MemoryGame'] = (function () {
+H5PUpgrades['H5P.MemoryGameCFRD'] = (function () {
   return {
     1: {
       /**
