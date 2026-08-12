@@ -30,11 +30,22 @@
     // Keep track of tabbable state
     self.isTabbable = false;
 
+    // Optional lock: when true, flip is ignored (game ended / failed)
+    var isLockedChecker = null;
+
     // Initialize event inheritance
     EventDispatcher.call(self);
 
     let path, width, height, $card, $wrapper, $image, removedState,
       flippedState, audioPlayer;
+
+    /**
+     * Set a function that returns true when flips should be blocked.
+     * @param {Function|null} fn
+     */
+    self.setLockedChecker = function (fn) {
+      isLockedChecker = typeof fn === 'function' ? fn : null;
+    };
 
     /**
      * Process HTML escaped string for use as attribute value,
@@ -236,6 +247,10 @@
      * @param {boolean} [params.restoring] True if card is being restored from a saved state.
      */
     self.flip = function (params = {}) {
+      if (!params.restoring && isLockedChecker && isLockedChecker()) {
+        return;
+      }
+
       if (flippedState) {
         $wrapper.blur().focus(); // Announce card label again
         return;

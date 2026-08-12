@@ -433,6 +433,24 @@
         {
           "label": "Show card turns",
           "description": "Display the number of card turns under the cards."
+        },
+        {
+          "label": "Enable time limit",
+          "description": "If enabled, the player must finish before the countdown reaches zero. Otherwise the activity is failed."
+        },
+        {
+          "label": "Time limit (seconds)",
+          "description": "Countdown duration in seconds. The marker shows minutes:seconds (for example 30 → 0:30, 180 → 3:00, 1800 → 30:00).",
+          "default": 60
+        },
+        {
+          "label": "Enable card turn limit",
+          "description": "If enabled, the activity fails when the maximum number of card turns is reached before all pairs are found."
+        },
+        {
+          "label": "Maximum card turns",
+          "description": "Maximum number of card flips allowed. Each flip of a card counts as one turn.",
+          "default": 40
         }
       ]
     },
@@ -447,6 +465,107 @@
         {
           "label": "Card Back",
           "description": "Use a custom back for your cards."
+        },
+        {
+          "label": "Play area background color",
+          "description": "Background color of the 16:9 game area behind the cards."
+        },
+        {
+          "label": "Success feedback color",
+          "description": "Text color for the success message shown when all pairs are found."
+        },
+        {
+          "label": "Failed feedback color",
+          "description": "Text color for the failure message shown when a time or turn limit is reached."
+        },
+        {
+          "label": "Card border radius",
+          "description": "Corner roundness of the cards, in pixels."
+        },
+        {
+          "label": "Card border width",
+          "description": "Border thickness of the cards, in pixels."
+        },
+        {
+          "label": "Card border color",
+          "description": "Border color of the cards. Theme color may still tint borders when a theme is set."
+        },
+        {
+          "label": "Matched card opacity",
+          "description": "Opacity of cards after a pair is found, as a percentage (0 = invisible, 100 = fully opaque)."
+        },
+        {
+          "label": "Card front symbol",
+          "description": "Character shown on the unturned card face when no front image is used. Leave empty to use a question mark."
+        },
+        {
+          "label": "Card front image",
+          "description": "Optional image for the unturned card face. When set, it replaces the front symbol."
+        },
+        {
+          "label": "Card flip duration",
+          "description": "Duration of the flip animation in milliseconds."
+        },
+        {
+          "label": "Description popup background color",
+          "description": "Background color of the popup shown when a pair has a description."
+        },
+        {
+          "label": "Description popup header background color",
+          "description": "Background color of the image area at the top of the description popup."
+        },
+        {
+          "label": "Description popup text color",
+          "description": "Text color inside the description popup."
+        },
+        {
+          "label": "Retry button",
+          "description": "Action button style for the reset control shown when the game ends (same pattern as other CFRD 1.0 libraries).",
+          "fields": [
+            {
+              "label": "Use gradient background"
+            },
+            {
+              "label": "Button background color"
+            },
+            {
+              "label": "Gradient background",
+              "fields": [
+                {
+                  "label": "Gradient angle",
+                  "description": "Direction in degrees (0 = upward, 180 = downward)."
+                },
+                {
+                  "label": "Gradient start color"
+                },
+                {
+                  "label": "Gradient end color"
+                }
+              ]
+            },
+            {
+              "label": "Button text color"
+            },
+            {
+              "label": "Hover background color"
+            },
+            {
+              "label": "Hover text color"
+            },
+            {
+              "label": "Use button border"
+            },
+            {
+              "label": "Button border color"
+            },
+            {
+              "label": "Button hover border color"
+            },
+            {
+              "label": "Button border radius",
+              "description": "Corner roundness in rem units."
+            }
+          ]
         }
       ]
     },
@@ -462,8 +581,26 @@
           "default": "Time spent"
         },
         {
+          "label": "Time remaining text",
+          "default": "Time remaining"
+        },
+        {
           "label": "Feedback text",
           "default": "Good work!"
+        },
+        {
+          "label": "Failed feedback text",
+          "default": "Game over!"
+        },
+        {
+          "label": "Failed due to time label",
+          "default": "Time ran out.",
+          "description": "Shown under the status bar when the time limit is reached (retry dialog)."
+        },
+        {
+          "label": "Failed due to turns label",
+          "default": "No more card turns left.",
+          "description": "Shown under the status bar when the card turn limit is reached (retry dialog)."
         },
         {
           "label": "Try again button text",
@@ -483,7 +620,8 @@
         },
         {
           "label": "Game finished label",
-          "default": "All of the cards have been found."
+          "default": "All of the cards have been found.",
+          "description": "Shown under the status bar when the player finds all pairs (retry dialog)."
         },
         {
           "label": "Card indexing label",

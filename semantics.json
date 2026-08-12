@@ -1056,6 +1056,60 @@
         "description": "Display the number of card turns under the cards.",
         "importance": "low",
         "default": true
+      },
+      {
+        "name": "enableTimeLimit",
+        "type": "boolean",
+        "label": "Enable time limit",
+        "description": "If enabled, the player must finish before the countdown reaches zero. Otherwise the activity is failed.",
+        "importance": "low",
+        "default": false
+      },
+      {
+        "name": "timeLimitSeconds",
+        "type": "number",
+        "label": "Time limit (seconds)",
+        "description": "Countdown duration in seconds. The marker shows minutes:seconds (for example 30 → 0:30, 180 → 3:00, 1800 → 30:00).",
+        "importance": "low",
+        "default": 60,
+        "min": 1,
+        "step": 1,
+        "widget": "showWhen",
+        "showWhen": {
+          "rules": [
+            {
+              "field": "enableTimeLimit",
+              "equals": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "enableTurnLimit",
+        "type": "boolean",
+        "label": "Enable card turn limit",
+        "description": "If enabled, the activity fails when the maximum number of card turns is reached before all pairs are found.",
+        "importance": "low",
+        "default": false
+      },
+      {
+        "name": "maxCardTurns",
+        "type": "number",
+        "label": "Maximum card turns",
+        "description": "Maximum number of card flips allowed. Each flip of a card counts as one turn.",
+        "importance": "low",
+        "default": 40,
+        "min": 1,
+        "step": 1,
+        "widget": "showWhen",
+        "showWhen": {
+          "rules": [
+            {
+              "field": "enableTurnLimit",
+              "equals": true
+            }
+          ]
+        }
       }
     ]
   },
@@ -1088,15 +1142,354 @@
         "optional": true,
         "description": "Use a custom back for your cards.",
         "ratio": 1
+      },
+      {
+        "name": "playAreaBackgroundColor",
+        "type": "text",
+        "label": "Play area background color",
+        "importance": "low",
+        "description": "Background color of the 16:9 game area behind the cards.",
+        "optional": true,
+        "default": "#ffffff",
+        "widget": "colorSelector",
+        "spectrum": {
+          "showInput": true
+        }
+      },
+      {
+        "name": "feedbackColor",
+        "type": "text",
+        "label": "Success feedback color",
+        "importance": "low",
+        "description": "Text color for the success message shown when all pairs are found.",
+        "optional": true,
+        "default": "#333333",
+        "widget": "colorSelector",
+        "spectrum": {
+          "showInput": true
+        }
+      },
+      {
+        "name": "feedbackFailedColor",
+        "type": "text",
+        "label": "Failed feedback color",
+        "importance": "low",
+        "description": "Text color for the failure message shown when a time or turn limit is reached.",
+        "optional": true,
+        "default": "#b00020",
+        "widget": "colorSelector",
+        "spectrum": {
+          "showInput": true
+        }
+      },
+      {
+        "name": "cardBorderRadius",
+        "type": "number",
+        "label": "Card border radius",
+        "importance": "low",
+        "description": "Corner roundness of the cards, in pixels.",
+        "optional": true,
+        "default": 4,
+        "min": 0,
+        "max": 40,
+        "step": 1,
+        "unit": "px"
+      },
+      {
+        "name": "cardBorderWidth",
+        "type": "number",
+        "label": "Card border width",
+        "importance": "low",
+        "description": "Border thickness of the cards, in pixels.",
+        "optional": true,
+        "default": 2,
+        "min": 0,
+        "max": 12,
+        "step": 1,
+        "unit": "px"
+      },
+      {
+        "name": "cardBorderColor",
+        "type": "text",
+        "label": "Card border color",
+        "importance": "low",
+        "description": "Border color of the cards. Theme color may still tint borders when a theme is set.",
+        "optional": true,
+        "default": "#d0d0d0",
+        "widget": "colorSelector",
+        "spectrum": {
+          "showInput": true
+        }
+      },
+      {
+        "name": "matchedOpacity",
+        "type": "number",
+        "label": "Matched card opacity",
+        "importance": "low",
+        "description": "Opacity of cards after a pair is found, as a percentage (0 = invisible, 100 = fully opaque).",
+        "optional": true,
+        "default": 30,
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "unit": "%"
+      },
+      {
+        "name": "cardFrontSymbol",
+        "type": "text",
+        "label": "Card front symbol",
+        "importance": "low",
+        "description": "Character shown on the unturned card face when no front image is used. Leave empty to use a question mark.",
+        "optional": true,
+        "default": "",
+        "maxLength": 4
+      },
+      {
+        "name": "cardFrontImage",
+        "type": "image",
+        "label": "Card front image",
+        "importance": "low",
+        "optional": true,
+        "description": "Optional image for the unturned card face. When set, it replaces the front symbol.",
+        "ratio": 1
+      },
+      {
+        "name": "flipDurationMs",
+        "type": "number",
+        "label": "Card flip duration",
+        "importance": "low",
+        "description": "Duration of the flip animation in milliseconds.",
+        "optional": true,
+        "default": 600,
+        "min": 100,
+        "max": 3000,
+        "step": 50,
+        "unit": "ms"
+      },
+      {
+        "name": "popupBackgroundColor",
+        "type": "text",
+        "label": "Description popup background color",
+        "importance": "low",
+        "description": "Background color of the popup shown when a pair has a description.",
+        "optional": true,
+        "default": "#ffffff",
+        "widget": "colorSelector",
+        "spectrum": {
+          "showInput": true
+        }
+      },
+      {
+        "name": "popupHeaderBackgroundColor",
+        "type": "text",
+        "label": "Description popup header background color",
+        "importance": "low",
+        "description": "Background color of the image area at the top of the description popup.",
+        "optional": true,
+        "default": "#f0f0f0",
+        "widget": "colorSelector",
+        "spectrum": {
+          "showInput": true
+        }
+      },
+      {
+        "name": "popupTextColor",
+        "type": "text",
+        "label": "Description popup text color",
+        "importance": "low",
+        "description": "Text color inside the description popup.",
+        "optional": true,
+        "default": "#333333",
+        "widget": "colorSelector",
+        "spectrum": {
+          "showInput": true
+        }
+      },
+      {
+        "name": "retryButton",
+        "type": "group",
+        "label": "Retry button",
+        "importance": "low",
+        "optional": true,
+        "expanded": false,
+        "description": "Action button style for the reset control shown when the game ends (same pattern as other CFRD 1.0 libraries).",
+        "fields": [
+          {
+            "name": "useGradientBackground",
+            "type": "boolean",
+            "label": "Use gradient background",
+            "default": false
+          },
+          {
+            "name": "backgroundColor",
+            "type": "text",
+            "label": "Button background color",
+            "default": "#1a73d9",
+            "optional": true,
+            "widget": "showWhen",
+            "showWhen": {
+              "widget": "colorSelector",
+              "rules": [
+                {
+                  "field": "useGradientBackground",
+                  "equals": false
+                }
+              ]
+            },
+            "spectrum": {
+              "showInput": true
+            }
+          },
+          {
+            "name": "gradientBackground",
+            "type": "group",
+            "label": "Gradient background",
+            "importance": "low",
+            "widget": "showWhen",
+            "showWhen": {
+              "rules": [
+                {
+                  "field": "useGradientBackground",
+                  "equals": true
+                }
+              ]
+            },
+            "fields": [
+              {
+                "name": "angle",
+                "type": "number",
+                "label": "Gradient angle",
+                "description": "Direction in degrees (0 = upward, 180 = downward).",
+                "default": 180,
+                "min": 0,
+                "max": 360,
+                "step": 1,
+                "unit": "°"
+              },
+              {
+                "name": "colorStart",
+                "type": "text",
+                "widget": "colorSelector",
+                "label": "Gradient start color",
+                "default": "#1a73d9",
+                "optional": true,
+                "spectrum": {
+                  "showInput": true
+                }
+              },
+              {
+                "name": "colorEnd",
+                "type": "text",
+                "widget": "colorSelector",
+                "label": "Gradient end color",
+                "default": "#1a73d9",
+                "optional": true,
+                "spectrum": {
+                  "showInput": true
+                }
+              }
+            ]
+          },
+          {
+            "name": "textColor",
+            "type": "text",
+            "widget": "colorSelector",
+            "label": "Button text color",
+            "default": "#ffffff",
+            "optional": true,
+            "spectrum": {
+              "showInput": true
+            }
+          },
+          {
+            "name": "hoverBackgroundColor",
+            "type": "text",
+            "widget": "colorSelector",
+            "label": "Hover background color",
+            "default": "#1356a3",
+            "optional": true,
+            "spectrum": {
+              "showInput": true
+            }
+          },
+          {
+            "name": "hoverTextColor",
+            "type": "text",
+            "widget": "colorSelector",
+            "label": "Hover text color",
+            "default": "#ffffff",
+            "optional": true,
+            "spectrum": {
+              "showInput": true
+            }
+          },
+          {
+            "name": "useBorder",
+            "type": "boolean",
+            "label": "Use button border",
+            "default": false
+          },
+          {
+            "name": "borderColor",
+            "type": "text",
+            "label": "Button border color",
+            "default": "#1a73d9",
+            "optional": true,
+            "widget": "showWhen",
+            "showWhen": {
+              "widget": "colorSelector",
+              "rules": [
+                {
+                  "field": "useBorder",
+                  "equals": true
+                }
+              ]
+            },
+            "spectrum": {
+              "showInput": true
+            }
+          },
+          {
+            "name": "hoverBorderColor",
+            "type": "text",
+            "label": "Button hover border color",
+            "default": "#1356a3",
+            "optional": true,
+            "widget": "showWhen",
+            "showWhen": {
+              "widget": "colorSelector",
+              "rules": [
+                {
+                  "field": "useBorder",
+                  "equals": true
+                }
+              ]
+            },
+            "spectrum": {
+              "showInput": true
+            }
+          },
+          {
+            "name": "borderRadius",
+            "type": "number",
+            "label": "Button border radius",
+            "description": "Corner roundness in rem units.",
+            "default": 2,
+            "min": 0,
+            "max": 3,
+            "decimals": 2,
+            "unit": "rem"
+          }
+        ]
       }
-    ]
+    ],
+    "expanded": false
   },
   {
     "label": "Localization",
-    "importance": "low",
+    "importance": "high",
     "name": "l10n",
     "type": "group",
-    "common": true,
     "fields": [
       {
         "label": "Card turns text",
@@ -1113,11 +1506,41 @@
         "default": "Time spent"
       },
       {
+        "label": "Time remaining text",
+        "importance": "low",
+        "name": "timeRemaining",
+        "type": "text",
+        "default": "Time remaining"
+      },
+      {
         "label": "Feedback text",
         "importance": "low",
         "name": "feedback",
         "type": "text",
         "default": "Good work!"
+      },
+      {
+        "label": "Failed feedback text",
+        "importance": "low",
+        "name": "feedbackFailed",
+        "type": "text",
+        "default": "Game over!"
+      },
+      {
+        "label": "Failed due to time label",
+        "importance": "low",
+        "name": "failedTime",
+        "type": "text",
+        "default": "Time ran out.",
+        "description": "Shown under the status bar when the time limit is reached (retry dialog)."
+      },
+      {
+        "label": "Failed due to turns label",
+        "importance": "low",
+        "name": "failedTurns",
+        "type": "text",
+        "default": "No more card turns left.",
+        "description": "Shown under the status bar when the card turn limit is reached (retry dialog)."
       },
       {
         "label": "Try again button text",
@@ -1143,7 +1566,7 @@
       {
         "label": "Game instructions",
         "importance": "low",
-        "name": "label",
+        "name": "labelInstructions",
         "type": "text",
         "default": "Use arrow keys left and right to navigate cards. Use space or enter key to turn card."
       },
@@ -1152,7 +1575,8 @@
         "importance": "low",
         "name": "done",
         "type": "text",
-        "default": "All of the cards have been found."
+        "default": "All of the cards have been found.",
+        "description": "Shown under the status bar when the player finds all pairs (retry dialog)."
       },
       {
         "label": "Card indexing label",

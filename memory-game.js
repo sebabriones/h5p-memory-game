@@ -117,6 +117,8 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
     var flipped, timer, counter, popup, $bottom, $feedback, $wrapper, $playArea, maxWidth, maxHeight, numCols, audioCard;
     var cards = [];
     var score = 0;
+    var gameEnded = false;
+    var failReason = null;
     numInstances++;
 
     // Add defaults
@@ -124,7 +126,11 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       l10n: {
         cardTurns: 'Card turns',
         timeSpent: 'Time spent',
+        timeRemaining: 'Time remaining',
         feedback: 'Good work!',
+        feedbackFailed: 'Game over!',
+        failedTime: 'Time ran out.',
+        failedTurns: 'No more card turns left.',
         tryAgain: 'Reset',
         closeLabel: 'Close',
         label: 'Memory Game. Find the matching cards.',
@@ -138,6 +144,44 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
         cardNotMatchedA11y: 'Your chosen cards do not match. Turn other cards to try again.'
       }
     }, parameters);
+
+    var behaviourConfig = parameters.behaviour || {};
+    var enableTimeLimit = isTruthy(behaviourConfig.enableTimeLimit);
+    var timeLimitSeconds = Math.max(1, parseInt(behaviourConfig.timeLimitSeconds, 10) || 60);
+    var timeLimitMs = timeLimitSeconds * 1000;
+    var enableTurnLimit = isTruthy(behaviourConfig.enableTurnLimit);
+    var maxCardTurns = Math.max(1, parseInt(behaviourConfig.maxCardTurns, 10) || 40);
+
+    /**
+     * Start the countdown when a time limit is active.
+     * No-op if the game already ended or the timer is already running.
+     *
+     * @private
+     */
+    var startCountdownIfNeeded = function () {
+      if (!enableTimeLimit || gameEnded || !timer) {
+        return;
+      }
+      if (timer.getStatus() === H5P.Timer.PLAYING) {
+        return;
+      }
+      timer.play();
+    };
+
+    /**
+     * Whether instructions show an intro curtain that must be dismissed first.
+     *
+     * @private
+     * @returns {boolean}
+     */
+    var hasIntroCurtain = function () {
+      var instructionsOpts = getInstructionsOptions(self);
+      return !!(
+        instructionsOpts &&
+        (instructionsOpts.displayMode === 'intro' ||
+          instructionsOpts.displayMode === 'both')
+      );
+    };
 
     // Filter out invalid cards
     parameters.cards = (parameters.cards ?? []).filter((cardParams) => {
@@ -209,43 +253,123 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
     };
 
     /**
-     * Game has finished!
+     * Append retry dialog when allowRetry is enabled.
+     *
+     * @private
+     * @param {string} statusText Visible end-of-game message.
+     */
+    var appendRetryDialog = function (statusText) {
+      if (!(parameters.behaviour && parameters.behaviour.allowRetry)) {
+        return;
+      }
+
+      self.retryButton = createButton('reset', parameters.l10n.tryAgain || 'Reset', () => {
+        removeRetryButton();
+        self.resetTask(true);
+      });
+      self.retryButton.style.fontSize = (parseFloat(($playArea && $playArea.length ? $playArea : $wrapper).children('ul')[0].style.fontSize) * 0.75) + 'px';
+
+      var descriptionId = 'h5p-memory-end-message-' + numInstances;
+      const retryModal = document.createElement('div');
+      retryModal.className = 'h5p-memory-retry-dialog';
+      retryModal.setAttribute('role', 'dialog');
+      retryModal.setAttribute('aria-modal', 'true');
+      retryModal.setAttribute('aria-describedby', descriptionId);
+      retryModal.setAttribute('tabindex', -1);
+      const status = document.createElement('div');
+      status.className = 'h5p-memory-end-message';
+      status.setAttribute('id', descriptionId);
+      status.innerText = statusText.replace(/\n/g, ' ');
+      retryModal.appendChild(status);
+      retryModal.appendChild(self.retryButton);
+
+      $bottom[0].appendChild(retryModal);
+      retryModal.focus();
+    };
+
+    /**
+     * Lock cards and stop audio after the game ends.
+     *
+     * @private
+     */
+    var lockCards = function () {
+      cards.forEach((card) => {
+        card.makeUntabbable();
+        if (typeof card.stopAudio === 'function') {
+          card.stopAudio();
+        }
+      });
+      if (audioCard) {
+        audioCard.stopAudio();
+        audioCard = undefined;
+      }
+    };
+
+    /**
+     * Game has finished successfully.
      * @param {object} [params] Parameters.
      * @param {boolean} [params.restoring] True if restoring state.
      * @private
      */
     var finished = function (params = {}) {
+      if (gameEnded) {
+        return;
+      }
+      gameEnded = true;
+      failReason = null;
+
       if (!params.restoring) {
         timer.stop();
       }
       score = 1;
+      $feedback.html(parameters.l10n.feedback);
+      $feedback.removeClass('h5p-failed');
 
-      if (parameters.behaviour && parameters.behaviour.allowRetry) {
-        // Create retry button
-        self.retryButton = createButton('reset', parameters.l10n.tryAgain || 'Reset', () => {
-          removeRetryButton();
-          self.resetTask(true);
-        });
-        self.retryButton.style.fontSize = (parseFloat(($playArea && $playArea.length ? $playArea : $wrapper).children('ul')[0].style.fontSize) * 0.75) + 'px';
-        
-        const retryModal = document.createElement('div');
-        retryModal.setAttribute('role', 'dialog');
-        retryModal.setAttribute('aria-modal', 'true');
-        retryModal.setAttribute('aria-describedby', 'modalDescription');
-        retryModal.setAttribute('tabindex', -1);
-        const status = document.createElement('div');
-        status.style.width = '1px';
-        status.style.height = '1px';
-        status.setAttribute('id', 'modalDescription');
-        status.innerText = `${$feedback[0].innerHTML} ${parameters.l10n.done} ${$status[0].innerText}`.replace(/\n/g, " ");
-        retryModal.appendChild(status);
-        retryModal.appendChild(self.retryButton);
-        
-        $bottom[0].appendChild(retryModal); // Add to DOM
-        retryModal.focus();
+      lockCards();
+
+      // Feedback banner + editable "done" message in the retry dialog
+      appendRetryDialog(parameters.l10n.done || '');
+      $feedback.addClass('h5p-show');
+
+      if (!params.restoring) {
+        self.trigger(self.createXAPICompletedEvent());
       }
-      $feedback.addClass('h5p-show'); // Announce
-      
+    };
+
+    /**
+     * Game has failed (time or turn limit).
+     * @param {string} reason 'time' | 'turns'
+     * @param {object} [params]
+     * @param {boolean} [params.restoring]
+     * @private
+     */
+    var failed = function (reason, params = {}) {
+      if (gameEnded) {
+        return;
+      }
+      gameEnded = true;
+      failReason = reason === 'turns' ? 'turns' : 'time';
+
+      if (!params.restoring) {
+        timer.stop();
+      }
+      score = 0;
+      flipped = undefined;
+      $feedback.html(parameters.l10n.feedbackFailed);
+      $feedback.addClass('h5p-failed');
+
+      if (popup) {
+        popup.close();
+      }
+      flipBackCards({ keepPairs: true });
+      lockCards();
+
+      var reasonText = failReason === 'turns' ?
+        parameters.l10n.failedTurns :
+        parameters.l10n.failedTime;
+      appendRetryDialog(reasonText || '');
+      $feedback.addClass('h5p-show');
+
       if (!params.restoring) {
         self.trigger(self.createXAPICompletedEvent());
       }
@@ -269,15 +393,20 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
     var resetGame = function (moveFocus = false) {
       // Reset cards
       score = 0;
+      gameEnded = false;
+      failReason = null;
       flipped = undefined;
 
       // Remove feedback
       $feedback[0].classList.remove('h5p-show');
+      $feedback[0].classList.remove('h5p-failed');
+      $feedback.html(parameters.l10n.feedback);
 
       popup.close();
 
       // Reset timer and counter
       timer.stop();
+      timer.clearZeroFlag && timer.clearZeroFlag();
       timer.reset();
       counter.reset();
 
@@ -305,6 +434,8 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
         if (self.retryButton) {
           $bottom[0].removeChild(self.retryButton.parentNode);
         }
+        // Restart countdown after retry when a time limit is configured
+        startCountdownIfNeeded();
       }, 600);
     };
 
@@ -375,7 +506,15 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
      * @param {H5P.MemoryGameCFRD.Card} mate
      */
     var addCard = function (card, mate) {
+      card.setLockedChecker(function () {
+        return gameEnded;
+      });
+
       card.on('flip', (event) => {
+        if (gameEnded && !event.data?.restoring) {
+          return;
+        }
+
         self.answerGiven = true;
 
         if (getNumFlipped() === 3 && !event.data?.restoring) {
@@ -390,7 +529,7 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
         if (!event.data?.restoring) {
           popup.close();
           self.triggerXAPI('interacted');
-          // Keep track of time spent
+          // Keep track of time spent / countdown
           timer.play();
         }
 
@@ -429,6 +568,17 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
         
         if (okToCheck) {
           check(card, matie, mate);
+        }
+
+        // Fail immediately when the turn limit is reached (unless the board is complete)
+        if (
+          !event.data?.restoring &&
+          enableTurnLimit &&
+          !gameEnded &&
+          !cards.every((c) => c.isRemoved()) &&
+          counter.hasReachedLimit()
+        ) {
+          failed('turns');
         }
       });
 
@@ -645,20 +795,27 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
 
       $feedback = $('<div class="h5p-feedback">' + parameters.l10n.feedback + '</div>').appendTo($bottom);
 
-      // Status bar: optional time / turns, side by side when both are shown
+      // Status bar: optional time / turns (limits force the matching HUD item on)
       var behaviour = parameters.behaviour || {};
-      var showTimeSpent = behaviour.showTimeSpent === undefined ?
-        true :
-        isTruthy(behaviour.showTimeSpent);
-      var showCardTurns = behaviour.showCardTurns === undefined ?
-        true :
-        isTruthy(behaviour.showCardTurns);
+      var showTimeSpent = enableTimeLimit || (
+        behaviour.showTimeSpent === undefined ?
+          true :
+          isTruthy(behaviour.showTimeSpent)
+      );
+      var showCardTurns = enableTurnLimit || (
+        behaviour.showCardTurns === undefined ?
+          true :
+          isTruthy(behaviour.showCardTurns)
+      );
+      var timeStatusLabel = enableTimeLimit ?
+        (parameters.l10n.timeRemaining || parameters.l10n.timeSpent) :
+        parameters.l10n.timeSpent;
 
       var statusParts = [];
       if (showTimeSpent) {
         statusParts.push(
           '<div class="h5p-status-item">' +
-            '<dt>' + parameters.l10n.timeSpent + ':</dt>' +
+            '<dt>' + timeStatusLabel + ':</dt>' +
             '<dd class="h5p-time-spent"><time role="timer" datetime="PT0M0S">0:00</time><span class="h5p-memory-hidden-read">.</span></dd>' +
           '</div>'
         );
@@ -680,9 +837,21 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       var timerElement = (showTimeSpent && $status.length) ?
         $status.find('time')[0] :
         document.createElement('time');
+      var timerStartValue = enableTimeLimit ?
+        (this.previousState.timer !== undefined ? this.previousState.timer : timeLimitMs) :
+        (this.previousState.timer ?? 0);
       timer = new MemoryGame.Timer(
         timerElement,
-        this.previousState.timer ?? 0
+        timerStartValue,
+        enableTimeLimit ? {
+          countdown: true,
+          durationMs: timeLimitMs,
+          onZero: function () {
+            if (!gameEnded && !cards.every((c) => c.isRemoved())) {
+              failed('time');
+            }
+          }
+        } : {}
       );
 
       var $counterTarget = (showCardTurns && $status.length) ?
@@ -690,7 +859,8 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
         $('<span class="h5p-card-turns">0</span>');
       counter = new MemoryGame.Counter(
         $counterTarget,
-        this.previousState.counter ?? 0
+        this.previousState.counter ?? 0,
+        enableTurnLimit ? maxCardTurns : null
       );
       popup = new MemoryGame.Popup(parameters.l10n);
 
@@ -709,6 +879,162 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
     }
 
     /**
+     * Normalize a CSS color string.
+     *
+     * @private
+     * @param {*} value
+     * @param {string} fallback
+     * @returns {string}
+     */
+    var resolveColor = function (value, fallback) {
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim();
+      }
+      return fallback;
+    };
+
+    /**
+     * Build retry button CSS variables (CFRD action-button pattern).
+     * Supports legacy flat retryButton* fields from 1.0.15.
+     *
+     * @private
+     * @param {Object} look
+     * @returns {Object}
+     */
+    var buildRetryButtonVars = function (look) {
+      var retry = look.retryButton;
+      if (!retry || typeof retry !== 'object') {
+        retry = {
+          useGradientBackground: false,
+          backgroundColor: look.retryButtonBackgroundColor,
+          textColor: look.retryButtonTextColor,
+          hoverBackgroundColor: look.retryButtonHoverBackgroundColor,
+          hoverTextColor: look.retryButtonHoverTextColor,
+          useBorder: false,
+          borderRadius: 2
+        };
+      }
+
+      var useGradient = isTruthy(retry.useGradientBackground);
+      var gradient = retry.gradientBackground || {};
+      var solidBg = resolveColor(retry.backgroundColor, '#1a73d9');
+      var colorStart = resolveColor(gradient.colorStart, solidBg);
+      var colorEnd = resolveColor(gradient.colorEnd, solidBg);
+      var angle = Number(gradient.angle);
+      if (isNaN(angle)) {
+        angle = 180;
+      }
+      var background = useGradient ?
+        ('linear-gradient(' + angle + 'deg, ' + colorStart + ', ' + colorEnd + ')') :
+        solidBg;
+      var hoverBackground = resolveColor(retry.hoverBackgroundColor, '#1356a3');
+      var useBorder = isTruthy(retry.useBorder);
+      var borderRadius = Number(retry.borderRadius);
+      if (isNaN(borderRadius)) {
+        borderRadius = 2;
+      }
+      borderRadius = Math.max(0, Math.min(3, borderRadius));
+
+      return {
+        background: background,
+        text: resolveColor(retry.textColor, '#ffffff'),
+        hoverBackground: hoverBackground,
+        hoverText: resolveColor(retry.hoverTextColor, '#ffffff'),
+        borderWidth: useBorder ? '2px' : '0px',
+        borderColor: resolveColor(retry.borderColor, solidBg),
+        hoverBorderColor: resolveColor(retry.hoverBorderColor, hoverBackground),
+        borderRadius: borderRadius + 'rem'
+      };
+    };
+
+    /**
+     * Apply look-and-feel CSS variables from content parameters.
+     *
+     * @private
+     * @param {H5P.jQuery} $root Root element (.h5p-memory-game-cfrd).
+     */
+    var applyLookAndFeel = function ($root) {
+      if (!$root || !$root.length || !$root[0] || !$root[0].style) {
+        return;
+      }
+
+      var look = parameters.lookNFeel || {};
+      var style = $root[0].style;
+      var setVar = function (name, value) {
+        if (value !== undefined && value !== null && value !== '') {
+          style.setProperty(name, String(value));
+        }
+      };
+
+      setVar('--h5p-mg-play-bg', resolveColor(look.playAreaBackgroundColor, '#ffffff'));
+      setVar('--h5p-mg-feedback-color', resolveColor(look.feedbackColor, '#333333'));
+      setVar('--h5p-mg-feedback-failed-color', resolveColor(look.feedbackFailedColor, '#b00020'));
+
+      var radius = Number(look.cardBorderRadius);
+      if (isNaN(radius)) {
+        radius = 4;
+      }
+      setVar('--h5p-mg-card-radius', Math.max(0, radius) + 'px');
+
+      var borderWidth = Number(look.cardBorderWidth);
+      if (isNaN(borderWidth)) {
+        borderWidth = 2;
+      }
+      setVar('--h5p-mg-card-border-width', Math.max(0, borderWidth) + 'px');
+      setVar('--h5p-mg-card-border-color', resolveColor(look.cardBorderColor, '#d0d0d0'));
+
+      var matchedOpacity = Number(look.matchedOpacity);
+      if (isNaN(matchedOpacity)) {
+        matchedOpacity = 30;
+      }
+      // Support legacy 0–1 fractions and new 0–100 percentage values.
+      if (matchedOpacity > 1) {
+        matchedOpacity = matchedOpacity / 100;
+      }
+      matchedOpacity = Math.max(0, Math.min(1, matchedOpacity));
+      setVar('--h5p-mg-matched-opacity', String(matchedOpacity));
+
+      var flipMs = Number(look.flipDurationMs);
+      if (isNaN(flipMs)) {
+        flipMs = 600;
+      }
+      flipMs = Math.max(100, Math.min(3000, flipMs));
+      setVar('--h5p-mg-flip-duration', (flipMs / 1000) + 's');
+
+      var symbol = (typeof look.cardFrontSymbol === 'string' && look.cardFrontSymbol.length) ?
+        look.cardFrontSymbol :
+        '?';
+      // CSS content requires a quoted string value
+      setVar('--h5p-mg-front-symbol', JSON.stringify(symbol));
+
+      var frontImagePath = look.cardFrontImage && look.cardFrontImage.path ?
+        H5P.getPath(look.cardFrontImage.path, id) :
+        null;
+      if (frontImagePath) {
+        $root.addClass('h5p-mg-custom-front-image');
+        setVar('--h5p-mg-front-image', "url('" + frontImagePath.replace(/'/g, "\\'") + "')");
+      }
+      else {
+        $root.removeClass('h5p-mg-custom-front-image');
+        style.removeProperty('--h5p-mg-front-image');
+      }
+
+      setVar('--h5p-mg-popup-bg', resolveColor(look.popupBackgroundColor, '#ffffff'));
+      setVar('--h5p-mg-popup-header-bg', resolveColor(look.popupHeaderBackgroundColor, '#f0f0f0'));
+      setVar('--h5p-mg-popup-text', resolveColor(look.popupTextColor, '#333333'));
+
+      var retryVars = buildRetryButtonVars(look);
+      setVar('--h5p-mg-retry-bg', retryVars.background);
+      setVar('--h5p-mg-retry-text', retryVars.text);
+      setVar('--h5p-mg-retry-hover-bg', retryVars.hoverBackground);
+      setVar('--h5p-mg-retry-hover-text', retryVars.hoverText);
+      setVar('--h5p-mg-retry-border-width', retryVars.borderWidth);
+      setVar('--h5p-mg-retry-border-color', retryVars.borderColor);
+      setVar('--h5p-mg-retry-hover-border-color', retryVars.hoverBorderColor);
+      setVar('--h5p-mg-retry-radius', retryVars.borderRadius);
+    };
+
+    /**
      * Attach this game's html to the given container.
      *
      * @param {H5P.jQuery} $container
@@ -723,6 +1049,8 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       }).appendTo($wrapper);
       self.$container = $wrapper;
       self.$playArea = $playArea;
+
+      applyLookAndFeel($wrapper);
 
       if (invertShades === -1) {
         $container.addClass('h5p-invert-shades');
@@ -765,11 +1093,32 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
 
       scheduleInstructionsAttach(self);
 
-      // resize to scale game size and check for finished game afterwards
+      // Countdown starts when the game is playable (not on first flip).
+      // If there is an intro curtain, wait until the player dismisses it.
+      if (enableTimeLimit && cards.length) {
+        $wrapper.on('click', '.h5p-instructions-intro-button', function () {
+          startCountdownIfNeeded();
+        });
+      }
+
+      // resize to scale game size and check for finished/failed game afterwards
       this.trigger('resize');
       window.requestAnimationFrame(() => {
-        if (cards.length && cards.every((card) => card.isRemoved())) {
+        if (!cards.length) {
+          return;
+        }
+        if (this.previousState.failed) {
+          failed(this.previousState.failReason || 'time', { restoring: true });
+        }
+        else if (cards.every((card) => card.isRemoved())) {
           finished({ restoring: true });
+        }
+        else if (enableTimeLimit) {
+          var isResume = this.previousState.timer !== undefined ||
+            this.previousState.counter !== undefined;
+          if (!hasIntroCurtain() || isResume) {
+            startCountdownIfNeeded();
+          }
         }
       });
 
@@ -797,9 +1146,9 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
      * @param {boolean} [force] Recalculate even if list size is unchanged
      */
     var scaleGameSize = function (force) {
-      // Card face 6.25em (no card margins)
+      // Card face 6.25em; +0.35em matches wrap margin-bottom (vertical row gap)
       var CARD_CELL_WIDTH_EM = 6.25;
-      var CARD_CELL_HEIGHT_EM = 6.25;
+      var CARD_CELL_HEIGHT_EM = 6.6;
       // Match ul padding: 0.25em top+bottom; extra slack for borders/subpixels
       var LIST_PAD_Y_EM = 0.75;
       var HEIGHT_SAFETY = 0.96;
@@ -1000,8 +1349,13 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
      */
     self.createXAPICompletedEvent = function () {
       var completedEvent = self.createXAPIEventTemplate('completed');
-      completedEvent.setScoredResult(self.getScore(), self.getMaxScore(), self, true, true);
-      completedEvent.data.statement.result.duration = 'PT' + (Math.round(timer.getTime() / 10) / 100) + 'S';
+      var success = self.getScore() === self.getMaxScore();
+      completedEvent.setScoredResult(self.getScore(), self.getMaxScore(), self, true, success);
+      var durationMs = timer.getTime(H5P.Timer.TYPE_PLAYING);
+      if (!durationMs && !enableTimeLimit) {
+        durationMs = timer.getTime();
+      }
+      completedEvent.data.statement.result.duration = 'PT' + (Math.round(durationMs / 10) / 100) + 'S';
       return completedEvent;
     }
 
@@ -1067,7 +1421,11 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       return {
         timer: timer.getTime(),
         counter: counter.getCount(),
-        cards: cardsState
+        cards: cardsState,
+        ...(gameEnded && score === 0 && {
+          failed: true,
+          failReason: failReason || 'time'
+        })
       }
     }
   }

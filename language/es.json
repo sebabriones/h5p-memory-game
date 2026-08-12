@@ -387,6 +387,24 @@
         {
           "label": "Mostrar giros de tarjeta",
           "description": "Muestra el número de giros de tarjeta debajo de las cartas."
+        },
+        {
+          "label": "Activar límite de tiempo",
+          "description": "Si está activo, el jugador debe terminar antes de que la cuenta regresiva llegue a cero. De lo contrario, la actividad se considera fallida."
+        },
+        {
+          "label": "Límite de tiempo (segundos)",
+          "description": "Duración de la cuenta regresiva en segundos. El marcador muestra minutos:segundos (por ejemplo 30 → 0:30, 180 → 3:00, 1800 → 30:00).",
+          "default": 60
+        },
+        {
+          "label": "Activar límite de giros de tarjeta",
+          "description": "Si está activo, la actividad falla cuando se alcanza el máximo de giros de tarjeta antes de encontrar todos los pares."
+        },
+        {
+          "label": "Máximo de giros de tarjeta",
+          "description": "Número máximo de volteos de tarjeta permitidos. Cada volteo cuenta como un giro.",
+          "default": 40
         }
       ]
     },
@@ -401,6 +419,107 @@
         {
           "label": "Reverso de la Tarjeta",
           "description": "Utiliza una parte posterior personalizada para tus tarjetas."
+        },
+        {
+          "label": "Color de fondo del área de juego",
+          "description": "Color de fondo del área 16:9 detrás de las cartas."
+        },
+        {
+          "label": "Color de la retroalimentación de éxito",
+          "description": "Color del texto del mensaje de éxito cuando se encuentran todos los pares."
+        },
+        {
+          "label": "Color de la retroalimentación de fallo",
+          "description": "Color del texto del mensaje de fallo cuando se agota el tiempo o los giros."
+        },
+        {
+          "label": "Radio del borde de las cartas",
+          "description": "Redondez de las esquinas de las cartas, en píxeles."
+        },
+        {
+          "label": "Grosor del borde de las cartas",
+          "description": "Grosor del borde de las cartas, en píxeles."
+        },
+        {
+          "label": "Color del borde de las cartas",
+          "description": "Color del borde de las cartas. El color del tema puede teñir el borde si hay tema activo."
+        },
+        {
+          "label": "Opacidad de cartas emparejadas",
+          "description": "Opacidad de las cartas tras encontrar un par, en porcentaje (0 = invisible, 100 = opaco)."
+        },
+        {
+          "label": "Símbolo del frente de la carta",
+          "description": "Carácter mostrado en la cara no volteada cuando no hay imagen de frente. Déjalo vacío para usar un signo de interrogación."
+        },
+        {
+          "label": "Imagen del frente de la carta",
+          "description": "Imagen opcional para la cara no volteada. Si se define, reemplaza el símbolo del frente."
+        },
+        {
+          "label": "Duración del volteo de la carta",
+          "description": "Duración de la animación de volteo en milisegundos."
+        },
+        {
+          "label": "Color de fondo del popup de descripción",
+          "description": "Color de fondo del popup que aparece cuando un par tiene descripción."
+        },
+        {
+          "label": "Color de fondo del encabezado del popup de descripción",
+          "description": "Color de fondo del área de imagen en la parte superior del popup de descripción."
+        },
+        {
+          "label": "Color de texto del popup de descripción",
+          "description": "Color del texto dentro del popup de descripción."
+        },
+        {
+          "label": "Botón reiniciar",
+          "description": "Estilo de botón de acción para el control de reinicio al terminar el juego (mismo patrón que otras librerías CFRD 1.0).",
+          "fields": [
+            {
+              "label": "Usar fondo en degradado"
+            },
+            {
+              "label": "Color de fondo del botón"
+            },
+            {
+              "label": "Fondo en degradado",
+              "fields": [
+                {
+                  "label": "Ángulo del degradado",
+                  "description": "Dirección en grados (0 = hacia arriba, 180 = hacia abajo)."
+                },
+                {
+                  "label": "Color inicial del degradado"
+                },
+                {
+                  "label": "Color final del degradado"
+                }
+              ]
+            },
+            {
+              "label": "Color de texto del botón"
+            },
+            {
+              "label": "Color de fondo al pasar el cursor"
+            },
+            {
+              "label": "Color de texto al pasar el cursor"
+            },
+            {
+              "label": "Usar borde del botón"
+            },
+            {
+              "label": "Color del borde del botón"
+            },
+            {
+              "label": "Color del borde al pasar el cursor"
+            },
+            {
+              "label": "Radio del borde del botón",
+              "description": "Redondez de las esquinas en unidades rem."
+            }
+          ]
         }
       ]
     },
@@ -416,8 +535,26 @@
           "default": "Tiempo usado"
         },
         {
+          "label": "Texto de tiempo restante",
+          "default": "Tiempo restante"
+        },
+        {
           "label": "Texto de retroalimentación",
           "default": "¡Buen trabajo!"
+        },
+        {
+          "label": "Texto de retroalimentación por fallo",
+          "default": "¡Fin del juego!"
+        },
+        {
+          "label": "Etiqueta de fallo por tiempo",
+          "default": "Se agotó el tiempo.",
+          "description": "Se muestra bajo la barra de estado cuando se agota el límite de tiempo (diálogo de reintento)."
+        },
+        {
+          "label": "Etiqueta de fallo por giros",
+          "default": "No quedan más giros de tarjeta.",
+          "description": "Se muestra bajo la barra de estado cuando se alcanza el límite de giros (diálogo de reintento)."
         },
         {
           "label": "Texto del botón Intentar de nuevo",
@@ -437,7 +574,8 @@
         },
         {
           "label": "Etiqueta de juego terminado",
-          "default": "Has encontrado todas las cartas."
+          "default": "Has encontrado todas las cartas.",
+          "description": "Se muestra bajo la barra de estado cuando el jugador encuentra todos los pares (diálogo de reintento)."
         },
         {
           "label": "Etiqueta de indexación de tarjeta",

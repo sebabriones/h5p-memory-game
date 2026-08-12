@@ -5,18 +5,23 @@
    *
    * @class H5P.MemoryGameCFRD.Counter
    * @param {H5P.jQuery} $container
+   * @param {number} [startValue=0]
+   * @param {number} [maxTurns] Optional maximum; when set, display is "current / max".
    */
-  MemoryGame.Counter = function ($container, startValue = 0) {
+  MemoryGame.Counter = function ($container, startValue = 0, maxTurns) {
     /** @alias H5P.MemoryGameCFRD.Counter# */
     var self = this;
 
     var current = startValue;
+    var limit = (maxTurns && maxTurns > 0) ? maxTurns : null;
 
     /**
      * @private
      */
     self.update = function () {
-      $container[0].innerText = current;
+      var text = limit ? (current + ' / ' + limit) : String(current);
+      var el = $container[0];
+      el.innerHTML = text + '<span class="h5p-memory-hidden-read">.</span>';
     };
 
     /**
@@ -25,7 +30,22 @@
      */
     self.getCount = () => {
       return current;
-    }
+    };
+
+    /**
+     * @returns {number|null} Configured turn limit, if any.
+     */
+    self.getLimit = function () {
+      return limit;
+    };
+
+    /**
+     * Whether the current count has reached the configured limit.
+     * @returns {boolean}
+     */
+    self.hasReachedLimit = function () {
+      return !!limit && current >= limit;
+    };
 
     /**
      * Increment the counter.
