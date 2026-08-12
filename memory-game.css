@@ -7,10 +7,12 @@
 .h5p-mg-play-area {
   box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
   aspect-ratio: 16 / 9;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0;
   padding: 0.5rem;
   position: relative;
   background: #ffffff;
@@ -36,6 +38,7 @@
   padding: 0.25em 0.5em !important;
   margin: 0 !important;
   overflow: hidden !important;
+  overflow: clip !important;
   flex: 1 1 auto;
   min-height: 0;
   font-size: 16px;
@@ -44,6 +47,8 @@
 }
 .h5p-mg-play-area > .h5p-programatically-focusable {
   flex: 0 0 auto;
+  min-height: 0;
+  line-height: 1.2;
 }
 
 .h5p-memory-game-cfrd .h5p-memory-card,
@@ -74,7 +79,7 @@
   display: inline-block;
   outline: none;
   position: relative;
-  margin: 0.75em 0.5em;
+  margin: 0;
   padding: 0;
   background: transparent;
   -webkit-perspective: 25em;
@@ -141,20 +146,6 @@
   font-size: 3.75em;
   line-height: 1.67em;
 }
-.h5p-memory-game-cfrd .h5p-memory-card .h5p-front:after {
-  content: "";
-  display: block;
-  position: absolute;
-  top: 85%;
-  height: 50%;
-  width: 100%;
-  -webkit-transform: rotateX(90deg);
-  -moz-transform: rotateX(90deg);
-  transform: rotateX(90deg);
-  background-image: -webkit-radial-gradient(ellipse closest-side, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
-  background-image: -moz-radial-gradient(ellipse closest-side, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
-  background-image: radial-gradient(ellipse closest-side, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
-}
 .h5p-memory-game-cfrd .h5p-memory-card .h5p-back {
   line-height: 5.83em;
   text-align: center;
@@ -195,17 +186,17 @@
   line-height: 1.5em;
   margin-right: 1em;
   font-size: 2em;
-  visibility: hidden;
+  display: none;
   -webkit-transform: scale(0,0) rotate(90deg);
   -moz-transform: scale(0,0) rotate(90deg);
   -ms-transform: scale(0,0) rotate(90deg);
   transform: scale(0,0) rotate(90deg);
   -webkit-transition: -webkit-transform 0.2s;
   -moz-transition: -webkit-transform 0.2s;
-  transition: -webkit-transform 0.2s;
+  transition: transform 0.2s;
 }
 .h5p-memory-game-cfrd .h5p-feedback.h5p-show {
-  visibility: visible;
+  display: block;
   -webkit-transform: scale(1,1) rotate(0deg);
   -moz-transform: scale(1,1) rotate(0deg);
   -ms-transform: scale(1,1) rotate(0deg);
@@ -213,17 +204,30 @@
 }
 
 .h5p-memory-game-cfrd .h5p-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 2em;
   clear: left;
   padding: 0 1em;
-  margin: 0.25em 0 1em 0;
+  margin: 0;
 }
-.h5p-memory-game-cfrd .h5p-status > dt {
-  float: left;
-  margin: 0 1em 0 0;
+.h5p-memory-game-cfrd .h5p-status-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35em;
+  margin: 0;
+  padding: 0;
+}
+.h5p-memory-game-cfrd .h5p-status-item > dt {
+  float: none;
+  margin: 0;
+  padding: 0;
   font-weight: bold;
 }
-.h5p-memory-game-cfrd .h5p-status > dd {
+.h5p-memory-game-cfrd .h5p-status-item > dd {
   margin: 0;
+  padding: 0;
 }
 
 .h5p-memory-game-cfrd .h5p-memory-obscure-content {

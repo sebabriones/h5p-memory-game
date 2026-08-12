@@ -425,6 +425,14 @@
         },
         {
           "label": "Add button for retrying when the game is over"
+        },
+        {
+          "label": "Show time spent",
+          "description": "Display the elapsed time under the cards. This is only a timer; it does not affect the score."
+        },
+        {
+          "label": "Show card turns",
+          "description": "Display the number of card turns under the cards."
         }
       ]
     },

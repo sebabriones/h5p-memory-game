@@ -645,21 +645,51 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
 
       $feedback = $('<div class="h5p-feedback">' + parameters.l10n.feedback + '</div>').appendTo($bottom);
 
-      // Add status bar
-      var $status = $('<dl class="h5p-status">' +
-                      '<dt>' + parameters.l10n.timeSpent + ':</dt>' +
-                      '<dd class="h5p-time-spent"><time role="timer" datetime="PT0M0S">0:00</time><span class="h5p-memory-hidden-read">.</span></dd>' +
-                      '<dt>' + parameters.l10n.cardTurns + ':</dt>' +
-                      '<dd class="h5p-card-turns">0<span class="h5p-memory-hidden-read">.</span></dd>' +
-                      '</dl>').appendTo($bottom);
+      // Status bar: optional time / turns, side by side when both are shown
+      var behaviour = parameters.behaviour || {};
+      var showTimeSpent = behaviour.showTimeSpent === undefined ?
+        true :
+        isTruthy(behaviour.showTimeSpent);
+      var showCardTurns = behaviour.showCardTurns === undefined ?
+        true :
+        isTruthy(behaviour.showCardTurns);
 
+      var statusParts = [];
+      if (showTimeSpent) {
+        statusParts.push(
+          '<div class="h5p-status-item">' +
+            '<dt>' + parameters.l10n.timeSpent + ':</dt>' +
+            '<dd class="h5p-time-spent"><time role="timer" datetime="PT0M0S">0:00</time><span class="h5p-memory-hidden-read">.</span></dd>' +
+          '</div>'
+        );
+      }
+      if (showCardTurns) {
+        statusParts.push(
+          '<div class="h5p-status-item">' +
+            '<dt>' + parameters.l10n.cardTurns + ':</dt>' +
+            '<dd class="h5p-card-turns">0<span class="h5p-memory-hidden-read">.</span></dd>' +
+          '</div>'
+        );
+      }
+
+      var $status = statusParts.length ?
+        $('<dl class="h5p-status">' + statusParts.join('') + '</dl>').appendTo($bottom) :
+        $();
+
+      // Timer/counter always exist for state and xAPI even if hidden from the HUD
+      var timerElement = (showTimeSpent && $status.length) ?
+        $status.find('time')[0] :
+        document.createElement('time');
       timer = new MemoryGame.Timer(
-        $status.find('time')[0],
+        timerElement,
         this.previousState.timer ?? 0
       );
 
+      var $counterTarget = (showCardTurns && $status.length) ?
+        $status.find('.h5p-card-turns') :
+        $('<span class="h5p-card-turns">0</span>');
       counter = new MemoryGame.Counter(
-        $status.find('.h5p-card-turns'),
+        $counterTarget,
         this.previousState.counter ?? 0
       );
       popup = new MemoryGame.Popup(parameters.l10n);
@@ -704,6 +734,25 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
         $bottom.appendTo($playArea);
         popup.appendTo($playArea);
         $playArea.append(ariaLiveRegion.getDOM());
+
+        // Prevent browser scroll-into-view from shifting the grid on card focus
+        var resetCardListScroll = function () {
+          var listEl = $list[0];
+          var playEl = $playArea && $playArea[0];
+          if (listEl) {
+            listEl.scrollTop = 0;
+            listEl.scrollLeft = 0;
+          }
+          if (playEl) {
+            playEl.scrollTop = 0;
+            playEl.scrollLeft = 0;
+          }
+        };
+        $list.on('focusin click', function () {
+          resetCardListScroll();
+          window.requestAnimationFrame(resetCardListScroll);
+        });
+
         $wrapper.click(function (e) {
           if (!popup.getElement()?.contains(e.target)) {
             popup.close();
@@ -745,12 +794,16 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
      * without scrolling (fullscreen covers very dense layouts).
      *
      * @private
+     * @param {boolean} [force] Recalculate even if list size is unchanged
      */
-    var scaleGameSize = function () {
-      // Card face 6.25em + horizontal/vertical margins from CSS
-      var CARD_CELL_WIDTH_EM = 7.25;
-      var CARD_CELL_HEIGHT_EM = 7.75;
-      var LIST_PAD_Y_EM = 0.5;
+    var scaleGameSize = function (force) {
+      // Card face 6.25em (no card margins)
+      var CARD_CELL_WIDTH_EM = 6.25;
+      var CARD_CELL_HEIGHT_EM = 6.25;
+      // Match ul padding: 0.25em top+bottom; extra slack for borders/subpixels
+      var LIST_PAD_Y_EM = 0.75;
+      var HEIGHT_SAFETY = 0.96;
+      var WIDTH_SAFETY = 0.98;
 
       // Check how much space we have available inside the 16:9 play area
       var $listParent = $playArea && $playArea.length ? $playArea : $wrapper;
@@ -762,7 +815,7 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       var listEl = $list[0];
       var newMaxWidth = listEl.clientWidth;
       var newMaxHeight = listEl.clientHeight;
-      if (maxWidth === newMaxWidth && maxHeight === newMaxHeight) {
+      if (!force && maxWidth === newMaxWidth && maxHeight === newMaxHeight) {
         return; // Same size, no need to recalculate
       }
 
@@ -799,18 +852,21 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
         });
       }
 
+      var usableWidth = maxWidth * WIDTH_SAFETY;
+      var usableHeight = maxHeight * HEIGHT_SAFETY;
+
       // Calculate how much one percentage of the standard/default size is
       var onePercentage = ((CARD_STD_SIZE * numCols) + STD_FONT_SIZE) / 100;
       var paddingSize = (STD_FONT_SIZE * LIST_PADDING) / onePercentage;
       var cardSize = (100 - paddingSize) / numCols;
-      var fontSizeFromWidth = (((maxWidth * (cardSize / 100)) * STD_FONT_SIZE) / CARD_STD_SIZE);
+      var fontSizeFromWidth = (((usableWidth * (cardSize / 100)) * STD_FONT_SIZE) / CARD_STD_SIZE);
 
       // Constrain by available height so the square grid fits in 16:9 without scroll
       var numRows = Math.ceil($elements.length / numCols);
       var heightInEm = (numRows * CARD_CELL_HEIGHT_EM) + LIST_PAD_Y_EM;
-      var fontSizeFromHeight = maxHeight > 0 ? (maxHeight / heightInEm) : fontSizeFromWidth;
+      var fontSizeFromHeight = usableHeight > 0 ? (usableHeight / heightInEm) : fontSizeFromWidth;
       var widthInEm = (numCols * CARD_CELL_WIDTH_EM) + LIST_PADDING;
-      var fontSizeFromCellWidth = maxWidth > 0 ? (maxWidth / widthInEm) : fontSizeFromWidth;
+      var fontSizeFromCellWidth = usableWidth > 0 ? (usableWidth / widthInEm) : fontSizeFromWidth;
 
       var fontSize = Math.min(fontSizeFromWidth, fontSizeFromHeight, fontSizeFromCellWidth);
       if (!(fontSize > 0) || isNaN(fontSize)) {
@@ -821,10 +877,40 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
 
       // We use font size to evenly scale all parts of the cards.
       $list.css('font-size', fontSize + 'px');
+
+      // Shrink until the grid actually fits the list box (avoids bottom clipping)
+      var guard = 48;
+      while (
+        guard-- > 0 &&
+        listEl.clientHeight > 0 &&
+        listEl.scrollHeight > listEl.clientHeight + 1 &&
+        fontSize > 8
+      ) {
+        fontSize = Math.max(8, fontSize - 0.5);
+        $list.css('font-size', fontSize + 'px');
+      }
+
       popup.setSize(fontSize);
       // due to rounding errors in browsers the margins may vary a bit…
 
       refreshInstructionsScale(self);
+    };
+
+    /**
+     * Scale grid after layout has settled (status bar / flex height).
+     * @private
+     */
+    var scheduleScaleGameSize = function () {
+      scaleGameSize();
+      window.requestAnimationFrame(function () {
+        scaleGameSize(true);
+        if (self.retryButton) {
+          var $ul = ($playArea && $playArea.length ? $playArea : $wrapper).children('ul');
+          if ($ul.length && $ul[0].style.fontSize) {
+            self.retryButton.style.fontSize = (parseFloat($ul[0].style.fontSize) * 0.75) + 'px';
+          }
+        }
+      });
     };
 
     /**
@@ -871,13 +957,7 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
 
     if (parameters.behaviour && parameters.behaviour.useGrid && numCardsToUse) {
       self.on('resize', () => {
-        scaleGameSize();
-        if (self.retryButton) {
-          var $ul = ($playArea && $playArea.length ? $playArea : $wrapper).children('ul');
-          if ($ul.length && $ul[0].style.fontSize) {
-            self.retryButton.style.fontSize = (parseFloat($ul[0].style.fontSize) * 0.75) + 'px';
-          }
-        }
+        scheduleScaleGameSize();
       });
     }
     else {

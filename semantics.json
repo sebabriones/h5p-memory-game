@@ -1040,6 +1040,22 @@
         "label": "Add button for retrying when the game is over",
         "importance": "low",
         "default": true
+      },
+      {
+        "name": "showTimeSpent",
+        "type": "boolean",
+        "label": "Show time spent",
+        "description": "Display the elapsed time under the cards. This is only a timer; it does not affect the score.",
+        "importance": "low",
+        "default": true
+      },
+      {
+        "name": "showCardTurns",
+        "type": "boolean",
+        "label": "Show card turns",
+        "description": "Display the number of card turns under the cards.",
+        "importance": "low",
+        "default": true
       }
     ]
   },

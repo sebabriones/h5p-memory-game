@@ -379,6 +379,14 @@
         },
         {
           "label": "Añadir botón para volver a intentarlo cuando el juego ha terminado"
+        },
+        {
+          "label": "Mostrar tiempo usado",
+          "description": "Muestra el tiempo transcurrido debajo de las cartas. Solo es un cronómetro; no afecta la puntuación."
+        },
+        {
+          "label": "Mostrar giros de tarjeta",
+          "description": "Muestra el número de giros de tarjeta debajo de las cartas."
         }
       ]
     },
