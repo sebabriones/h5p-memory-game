@@ -62,14 +62,13 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
           ($target.parent().length &&
             $target.parent().children(".h5p-instructions-root").length)
         ) {
-          instance.trigger("resize");
           return;
         }
 
         if (H5P.Instructions && typeof H5P.Instructions.attach === "function") {
           attached = H5P.Instructions.attach($target, instructions);
-          if (attached) {
-            instance.trigger("resize");
+          if (attached && typeof instance.relayoutPlayArea === "function") {
+            instance.relayoutPlayArea();
           }
         }
       }, delay);
@@ -306,6 +305,20 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
     };
 
     /**
+     * Re-layout grid and play area after end-of-game UI expands the footer.
+     * @private
+     */
+    var scheduleLayoutAfterGameEnd = function () {
+      maxWidth = 0;
+      maxHeight = 0;
+      window.requestAnimationFrame(function () {
+        if (typeof self.relayoutPlayArea === 'function') {
+          self.relayoutPlayArea();
+        }
+      });
+    };
+
+    /**
      * Game has finished successfully.
      * @param {object} [params] Parameters.
      * @param {boolean} [params.restoring] True if restoring state.
@@ -330,6 +343,7 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       // Feedback banner + editable "done" message in the retry dialog
       appendRetryDialog(parameters.l10n.done || '');
       $feedback.addClass('h5p-show');
+      scheduleLayoutAfterGameEnd();
 
       if (!params.restoring) {
         self.trigger(self.createXAPICompletedEvent());
@@ -369,6 +383,7 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
         parameters.l10n.failedTime;
       appendRetryDialog(reasonText || '');
       $feedback.addClass('h5p-show');
+      scheduleLayoutAfterGameEnd();
 
       if (!params.restoring) {
         self.trigger(self.createXAPICompletedEvent());
@@ -1050,6 +1065,15 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       self.$container = $wrapper;
       self.$playArea = $playArea;
 
+      if (typeof document !== 'undefined') {
+        if (document.documentElement) {
+          document.documentElement.style.overflow = 'hidden';
+        }
+        if (document.body) {
+          document.body.style.overflow = 'hidden';
+        }
+      }
+
       applyLookAndFeel($wrapper);
 
       if (invertShades === -1) {
@@ -1099,6 +1123,12 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
         $wrapper.on('click', '.h5p-instructions-intro-button', function () {
           startCountdownIfNeeded();
         });
+      }
+
+      // Set 16:9 height before the first paint / iframe measure to avoid a visible jump.
+      applyPlayAreaExplicitHeight(true);
+      if (parameters.behaviour && parameters.behaviour.useGrid && numCardsToUse) {
+        scaleGameSize(true);
       }
 
       // resize to scale game size and check for finished/failed game afterwards
@@ -1246,20 +1276,185 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
     };
 
     /**
+     * Fix 16:9 play area height in px (Course Presentation style; avoids LTI ghost scroll).
+     * @private
+     */
+    var applyPlayAreaExplicitHeight = function (force) {
+      var PlayArea = H5P.MemoryGameCFRD && H5P.MemoryGameCFRD.PlayArea;
+      var rootEl;
+      var layout;
+      var wrapperStyle;
+      var playAreaStyle;
+
+      if (!PlayArea || !$playArea || !$playArea.length) {
+        return;
+      }
+
+      rootEl = ($wrapper && $wrapper.length) ? $wrapper[0] : $playArea[0];
+      layout = PlayArea.getLayoutDimensions(rootEl);
+
+      if (
+        !force &&
+        self._mgLastHeightPx === layout.heightPx &&
+        self._mgLastWidthPx === layout.widthPx &&
+        self._mgLastCenterHorizontal === layout.centerHorizontal
+      ) {
+        return;
+      }
+
+      self._mgLastHeightPx = layout.heightPx;
+      self._mgLastWidthPx = layout.widthPx;
+      self._mgLastCenterHorizontal = layout.centerHorizontal;
+
+      if ($wrapper && $wrapper.length) {
+        wrapperStyle = {
+          width: '100%',
+          maxWidth: '100%',
+          height: layout.heightPx,
+          overflow: 'hidden',
+          boxSizing: 'border-box'
+        };
+
+        if (layout.centerHorizontal) {
+          wrapperStyle.display = 'flex';
+          wrapperStyle.justifyContent = 'center';
+          wrapperStyle.alignItems = 'center';
+        }
+        else {
+          wrapperStyle.display = '';
+          wrapperStyle.justifyContent = '';
+          wrapperStyle.alignItems = '';
+        }
+
+        $wrapper.css(wrapperStyle);
+      }
+
+      playAreaStyle = {
+        width: layout.widthPx,
+        maxWidth: '100%',
+        height: layout.heightPx,
+        flex: layout.centerHorizontal ? '0 0 auto' : '',
+        boxSizing: 'border-box'
+      };
+
+      $playArea.css(playAreaStyle);
+      $playArea.addClass('h5p-mg-layout-ready');
+    };
+
+    var clearLayoutCache = function () {
+      maxWidth = 0;
+      maxHeight = 0;
+      self._mgLastHeightPx = null;
+      self._mgLastWidthPx = null;
+      self._mgLastCenterHorizontal = null;
+    };
+
+    var resetPlayAreaLayoutStyles = function () {
+      if ($wrapper && $wrapper.length) {
+        $wrapper.css({
+          width: '',
+          height: '',
+          maxWidth: '',
+          display: '',
+          justifyContent: '',
+          alignItems: ''
+        });
+      }
+
+      if ($playArea && $playArea.length) {
+        $playArea.css({
+          width: '',
+          height: '',
+          maxWidth: '',
+          flex: ''
+        });
+        $playArea.removeClass('h5p-mg-layout-ready');
+      }
+    };
+
+    /**
+     * Relayout without bubbling a H5P resize (avoids iframe height jumps).
+     */
+    self.relayoutPlayArea = function () {
+      clearLayoutCache();
+      applyPlayAreaExplicitHeight(true);
+      if (parameters.behaviour && parameters.behaviour.useGrid && numCardsToUse) {
+        scaleGameSize(true);
+      }
+      refreshInstructionsScale(self);
+    };
+
+    var finalizeDeferredLayout = function (notifyH5P) {
+      self.relayoutPlayArea();
+      if (notifyH5P) {
+        self._mgLayoutTransition = false;
+        self.trigger('resize');
+      }
+    };
+
+    /**
+     * Wait for iframe/container dimensions after fullscreen transitions.
+     * @private
+     * @param {{resetFirst?: boolean, delayMs?: number, extraDelayMs?: number}} [options]
+     */
+    var scheduleDeferredLayout = function (options) {
+      var resetFirst = !options || options.resetFirst !== false;
+      var delayMs = (options && options.delayMs) || 80;
+      var extraDelayMs = (options && options.extraDelayMs) || 0;
+
+      clearLayoutCache();
+      self._mgLayoutTransition = true;
+      self._mgSkipResizeUntil = Date.now() + delayMs + extraDelayMs + 160;
+
+      if (resetFirst) {
+        resetPlayAreaLayoutStyles();
+      }
+
+      window.requestAnimationFrame(function () {
+        window.requestAnimationFrame(function () {
+          finalizeDeferredLayout(false);
+        });
+      });
+
+      window.setTimeout(function () {
+        finalizeDeferredLayout(true);
+      }, delayMs);
+
+      if (extraDelayMs > 0) {
+        window.setTimeout(function () {
+          finalizeDeferredLayout(false);
+        }, delayMs + extraDelayMs);
+      }
+    };
+
+    var scaleGameSizeTimer;
+    /**
      * Scale grid after layout has settled (status bar / flex height).
      * @private
      */
     var scheduleScaleGameSize = function () {
-      scaleGameSize();
-      window.requestAnimationFrame(function () {
-        scaleGameSize(true);
-        if (self.retryButton) {
-          var $ul = ($playArea && $playArea.length ? $playArea : $wrapper).children('ul');
-          if ($ul.length && $ul[0].style.fontSize) {
-            self.retryButton.style.fontSize = (parseFloat($ul[0].style.fontSize) * 0.75) + 'px';
+      if (self._mgSkipResizeUntil && Date.now() < self._mgSkipResizeUntil) {
+        return;
+      }
+
+      if (self._mgLayoutTransition) {
+        return;
+      }
+
+      window.clearTimeout(scaleGameSizeTimer);
+      scaleGameSizeTimer = window.setTimeout(function () {
+        applyPlayAreaExplicitHeight();
+        scaleGameSize();
+        window.requestAnimationFrame(function () {
+          scaleGameSize(true);
+          if (self.retryButton) {
+            var $ul = ($playArea && $playArea.length ? $playArea : $wrapper).children('ul');
+            if ($ul.length && $ul[0].style.fontSize) {
+              self.retryButton.style.fontSize = (parseFloat($ul[0].style.fontSize) * 0.75) + 'px';
+            }
           }
-        }
-      });
+        });
+      }, 16);
     };
 
     /**
@@ -1311,9 +1506,21 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
     }
     else {
       self.on('resize', () => {
+        if (self._mgLayoutTransition || (self._mgSkipResizeUntil && Date.now() < self._mgSkipResizeUntil)) {
+          return;
+        }
+        applyPlayAreaExplicitHeight();
         refreshInstructionsScale(self);
       });
     }
+
+    self.on('enterFullScreen', function () {
+      scheduleDeferredLayout({ resetFirst: false, delayMs: 80 });
+    });
+
+    self.on('exitFullScreen', function () {
+      scheduleDeferredLayout({ resetFirst: true, delayMs: 120, extraDelayMs: 120 });
+    });
 
     /**
      * Determine whether the task was answered already.

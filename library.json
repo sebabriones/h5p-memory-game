@@ -4,8 +4,9 @@
   "contentType": "Game",
   "majorVersion": 1,
   "minorVersion": 0,
-  "patchVersion": 19,
+  "patchVersion": 25,
   "runnable": 1,
+  "fullscreen": 1,
   "author": "sbriones (CFRD-UDEC), pmasquiaran (CFRD-UDEC)",
   "license": "MIT",
   "machineName": "H5P.MemoryGameCFRD",
@@ -22,6 +23,9 @@
     }
   ],
   "preloadedJs": [
+    {
+      "path": "play-area-scale.js"
+    },
     {
       "path": "memory-game.js"
     },

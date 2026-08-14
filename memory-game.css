@@ -4,11 +4,15 @@
   box-sizing: border-box;
 }
 
+.h5p-container.h5p-memory-game-cfrd,
+.h5p-memory-game-cfrd.h5p-container {
+  overflow: hidden;
+}
+
 .h5p-mg-play-area {
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  aspect-ratio: 16 / 9;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -16,6 +20,11 @@
   padding: 0.5rem;
   position: relative;
   background: var(--h5p-mg-play-bg, #ffffff);
+}
+
+/* Seed 16:9 before JS runs; removed once layout-ready is applied in resize. */
+.h5p-mg-play-area:not(.h5p-mg-layout-ready) {
+  aspect-ratio: 16 / 9;
 }
 
 /* Reserva espacio para la pestaña de instrucciones */
@@ -49,6 +58,9 @@
   flex: 0 0 auto;
   min-height: 0;
   line-height: 1.2;
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .h5p-memory-game-cfrd .h5p-memory-card,
