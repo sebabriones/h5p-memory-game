@@ -11,6 +11,54 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
     return value === true || value === 1 || value === "1" || value === "true";
   }
 
+  /**
+   * Primer load: reintentar setActivityStarted con delays reales hasta Integration.contents['cid-…'].
+   * Solo marca ensured cuando Integration está lista.
+   */
+  function ensureActivityStarted(instance) {
+    if (!instance || instance._cfrdActivityStartEnsured || instance._cfrdEnsuringActivityStart) {
+      return;
+    }
+
+    instance._cfrdEnsuringActivityStart = true;
+    var delays = [0, 16, 50, 100, 250, 500];
+    var delayIndex = 0;
+
+    var isIntegrationReady = function () {
+      var cid = instance.contentId;
+      return cid != null &&
+        typeof H5PIntegration !== 'undefined' &&
+        H5PIntegration.contents &&
+        H5PIntegration.contents['cid-' + cid];
+    };
+
+    var attempt = function () {
+      delete instance.activityStartTime;
+      if (typeof instance.setActivityStarted === 'function') {
+        instance.setActivityStarted();
+      }
+      else if (typeof instance.triggerXAPI === 'function') {
+        instance.triggerXAPI('attempted');
+        instance.activityStartTime = Date.now();
+      }
+
+      if (isIntegrationReady()) {
+        instance._cfrdEnsuringActivityStart = false;
+        instance._cfrdActivityStartEnsured = true;
+        return;
+      }
+
+      if (delayIndex >= delays.length) {
+        instance._cfrdEnsuringActivityStart = false;
+        return;
+      }
+
+      setTimeout(attempt, delays[delayIndex++]);
+    };
+
+    attempt();
+  }
+
   function getInstructionsOptions(instance) {
     var instructions = instance && instance.parameters && instance.parameters.instructions;
     var text;
@@ -1055,7 +1103,8 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
      * @param {H5P.jQuery} $container
      */
     self.attach = function ($container) {
-      this.triggerXAPI('attempted');
+      // Preferir setActivityStarted (timer + attempted); reintentar si Integration async.
+      ensureActivityStarted(this);
 
       // TODO: Only create on first attach!
       $wrapper = $container.addClass('h5p-memory-game-cfrd').html('');
@@ -1601,6 +1650,15 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       this.answerGiven = false;
       this.previousState = {};
       delete this.cardOrder;
+
+      // Nuevo intento: sin delete, setActivityStarted es no-op.
+      delete this.activityStartTime;
+      if (typeof this.setActivityStarted === 'function') {
+        this.setActivityStarted();
+      }
+      else {
+        this.triggerXAPI('attempted');
+      }
     };
 
     /**
