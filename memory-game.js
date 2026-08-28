@@ -167,7 +167,6 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
 
     var flipped, timer, counter, popup, $bottom, $feedback, $wrapper, $playArea, maxWidth, maxHeight, numCols, audioCard;
     var cards = [];
-    var score = 0;
     var gameEnded = false;
     var failReason = null;
     numInstances++;
@@ -386,7 +385,6 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       if (!params.restoring) {
         timer.stop();
       }
-      score = 1;
       $feedback.html(parameters.l10n.feedback);
       $feedback.removeClass('h5p-failed');
 
@@ -419,7 +417,6 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       if (!params.restoring) {
         timer.stop();
       }
-      score = 0;
       flipped = undefined;
       $feedback.html(parameters.l10n.feedbackFailed);
       $feedback.addClass('h5p-failed');
@@ -459,7 +456,6 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
      */
     var resetGame = function (moveFocus = false) {
       // Reset cards
-      score = 0;
       gameEnded = false;
       failReason = null;
       flipped = undefined;
@@ -829,11 +825,6 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
     // Ensure all cards are removed if state was stored during flip time period
     if (cards.every((card) => card.isFlipped())) {
       cards.forEach((card) => card.remove());
-    }
-
-    // Set score before DOM is attached to page
-    if (cards.every((card) => card.isRemoved())) {
-      score = 1;
     }
 
     // Build DOM elements to be attached later
@@ -1634,12 +1625,97 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
     }
 
     /**
+     * Pair indexes actually dealt, in the order they were created.
+     *
+     * The deck is trimmed by "number of cards to use", so the authored card
+     * list cannot be used as the source of truth for reporting.
+     *
+     * @returns {string[]} Pair indexes.
+     */
+    var getPairIndexesInPlay = function () {
+      var seen = [];
+
+      cards.forEach(function (card) {
+        var pairIndex = String(card.getId()).split('-')[0];
+        if (seen.indexOf(pairIndex) === -1) {
+          seen.push(pairIndex);
+        }
+      });
+
+      return seen;
+    };
+
+    /**
+     * Pair indexes whose two cards were both matched away.
+     *
+     * @returns {string[]} Pair indexes.
+     */
+    var getMatchedPairIndexes = function () {
+      return getPairIndexesInPlay().filter(function (pairIndex) {
+        var pairCards = cards.filter(function (card) {
+          return String(card.getId()).split('-')[0] === pairIndex;
+        });
+
+        return pairCards.length > 0 && pairCards.every(function (card) {
+          return card.isRemoved();
+        });
+      });
+    };
+
+    /**
+     * Readable label for one side of a pair.
+     *
+     * @param {string} pairIndex Pair index.
+     * @param {number} side 1 for the first card, 2 for its match.
+     * @returns {string} Label.
+     */
+    var getPairSideLabel = function (pairIndex, side) {
+      var cardParams = parameters.cards[parseInt(pairIndex, 10)] || {};
+      var alt = (side === 2 && cardParams.matchAlt) ? cardParams.matchAlt : cardParams.imageAlt;
+
+      return String(alt || cardParams.description || '');
+    };
+
+    /**
+     * Readable identifiers for one side of every pair.
+     *
+     * The alt text is authored, so it can be empty, repeated across pairs or
+     * carry the xAPI separators; the pair index is the last resort fallback.
+     *
+     * @param {number} side 1 for the first card, 2 for its match.
+     * @returns {Object} Pair index to identifier.
+     */
+    var getPairSideIds = function (side) {
+      var used = [];
+      var ids = {};
+
+      getPairIndexesInPlay().forEach(function (pairIndex) {
+        var id = getPairSideLabel(pairIndex, side)
+          .replace(/\[[.,]\]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim() || pairIndex;
+        var candidate = id;
+        var suffix = 1;
+
+        while (used.indexOf(candidate) !== -1) {
+          suffix++;
+          candidate = id + ' (' + suffix + ')';
+        }
+
+        used.push(candidate);
+        ids[pairIndex] = candidate;
+      });
+
+      return ids;
+    };
+
+    /**
      * Get the user's score for this task.
      *
      * @returns {Number} The current score.
      */
     self.getScore = function () {
-      return score;
+      return getMatchedPairIndexes().length;
     };
 
     /**
@@ -1648,7 +1724,7 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
      * @returns {Number} The maximum score.
      */
     self.getMaxScore = function () {
-      return 1;
+      return getPairIndexesInPlay().length;
     };
 
     /**
@@ -1665,8 +1741,47 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
         durationMs = timer.getTime();
       }
       completedEvent.data.statement.result.duration = 'PT' + (Math.round(durationMs / 10) / 100) + 'S';
+      self.addPairsToXAPI(completedEvent);
       return completedEvent;
     }
+
+    /**
+     * Describe the pairs as a matching interaction: every pair that had to be
+     * found against the pairs the player actually matched.
+     *
+     * @param {H5P.XAPIEvent} xAPIEvent Event to extend.
+     */
+    self.addPairsToXAPI = function (xAPIEvent) {
+      var statement = xAPIEvent.data.statement;
+      var definition = statement.object.definition;
+      var pairIndexes = getPairIndexesInPlay();
+      var sourceIds = getPairSideIds(1);
+      var targetIds = getPairSideIds(2);
+      var toPair = function (pairIndex) {
+        return sourceIds[pairIndex] + '[.]' + targetIds[pairIndex];
+      };
+
+      definition.type = 'http://adlnet.gov/expapi/activities/cmi.interaction';
+      definition.interactionType = 'matching';
+
+      definition.source = pairIndexes.map(function (pairIndex) {
+        return {
+          id: sourceIds[pairIndex],
+          description: { 'en-US': getPairSideLabel(pairIndex, 1) }
+        };
+      });
+
+      definition.target = pairIndexes.map(function (pairIndex) {
+        return {
+          id: targetIds[pairIndex],
+          description: { 'en-US': getPairSideLabel(pairIndex, 2) }
+        };
+      });
+
+      definition.correctResponsesPattern = [pairIndexes.map(toPair).join('[,]')];
+
+      statement.result.response = getMatchedPairIndexes().map(toPair).join('[,]');
+    };
 
     /**
      * Contract used by report rendering engine.
@@ -1740,9 +1855,9 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
         timer: timer.getTime(),
         counter: counter.getCount(),
         cards: cardsState,
-        ...(gameEnded && score === 0 && {
+        ...(gameEnded && failReason && {
           failed: true,
-          failReason: failReason || 'time'
+          failReason: failReason
         })
       }
     }
