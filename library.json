@@ -4,10 +4,10 @@
   "contentType": "Game",
   "majorVersion": 1,
   "minorVersion": 0,
-  "patchVersion": 28,
+  "patchVersion": 29,
   "runnable": 1,
   "fullscreen": 1,
-  "author": "sbriones (CFRD-UDEC), pmasquiaran (CFRD-UDEC)",
+  "author": "sbriones (CFRD-UDEC)",
   "license": "MIT",
   "machineName": "H5P.MemoryGameCFRD",
   "coreApi": {
