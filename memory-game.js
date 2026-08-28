@@ -92,6 +92,10 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
   }
 
   function scheduleInstructionsAttach(instance) {
+    if (instance && typeof instance.isRoot === "function" && !instance.isRoot()) {
+      return;
+    }
+
     [0, 200, 500].forEach(function (delay) {
       setTimeout(function () {
         var instructions = getInstructionsOptions(instance);
@@ -1441,6 +1445,52 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       }
     };
 
+    var stableLayoutFrame = null;
+
+    /**
+     * In embedded players (LMS iframes) the container keeps resizing after the
+     * fixed timers below have run, so the final layout was computed on
+     * transient dimensions and every later resize was discarded. Close the
+     * transition only once two consecutive frames report the same size.
+     * @private
+     */
+    var waitForStableLayout = function () {
+      var attempts = 0;
+      var lastWidth = null;
+      var lastHeight = null;
+      var measure;
+
+      if (stableLayoutFrame !== null) {
+        window.cancelAnimationFrame(stableLayoutFrame);
+      }
+
+      measure = function () {
+        var $reference = ($wrapper && $wrapper.length) ? $wrapper : $playArea;
+        var rect = ($reference && $reference.length) ?
+          $reference[0].getBoundingClientRect() :
+          { width: 0, height: 0 };
+        var settled = (rect.width === lastWidth && rect.height === lastHeight);
+
+        attempts++;
+        lastWidth = rect.width;
+        lastHeight = rect.height;
+
+        if (!settled && attempts < 60) {
+          stableLayoutFrame = window.requestAnimationFrame(measure);
+          return;
+        }
+
+        stableLayoutFrame = null;
+        self._mgSkipResizeUntil = 0;
+        self._mgLayoutTransition = false;
+        self._mgPendingLayout = false;
+        self.relayoutPlayArea();
+        self.trigger('resize');
+      };
+
+      stableLayoutFrame = window.requestAnimationFrame(measure);
+    };
+
     /**
      * Wait for iframe/container dimensions after fullscreen transitions.
      * @private
@@ -1474,6 +1524,8 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
           finalizeDeferredLayout(false);
         }, delayMs + extraDelayMs);
       }
+
+      window.setTimeout(waitForStableLayout, delayMs + extraDelayMs);
     };
 
     var scaleGameSizeTimer;
@@ -1482,11 +1534,11 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
      * @private
      */
     var scheduleScaleGameSize = function () {
-      if (self._mgSkipResizeUntil && Date.now() < self._mgSkipResizeUntil) {
-        return;
-      }
-
-      if (self._mgLayoutTransition) {
+      if (
+        self._mgLayoutTransition ||
+        (self._mgSkipResizeUntil && Date.now() < self._mgSkipResizeUntil)
+      ) {
+        self._mgPendingLayout = true;
         return;
       }
 
@@ -1556,6 +1608,7 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
     else {
       self.on('resize', () => {
         if (self._mgLayoutTransition || (self._mgSkipResizeUntil && Date.now() < self._mgSkipResizeUntil)) {
+          self._mgPendingLayout = true;
           return;
         }
         applyPlayAreaExplicitHeight();
