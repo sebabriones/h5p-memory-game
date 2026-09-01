@@ -1517,6 +1517,7 @@
         "importance": "low",
         "name": "feedback",
         "type": "text",
+        "maxLength": 2048,
         "default": "Good work!"
       },
       {
@@ -1524,6 +1525,7 @@
         "importance": "low",
         "name": "feedbackFailed",
         "type": "text",
+        "maxLength": 2048,
         "default": "Game over!"
       },
       {
