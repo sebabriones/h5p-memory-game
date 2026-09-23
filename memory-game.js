@@ -82,6 +82,7 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       displayMode: instructions.displayMode || "both",
       introButtonLabel: instructions.introButtonLabel || "Start",
       tabButtonLabel: instructions.tabButtonLabel || "Instructions",
+      tabButtonLabelOpen: instructions.tabButtonLabelOpen,
       appearance: $.extend(true, {}, instructions.appearance || {}),
       animation: $.extend(true, {}, instructions.animation || {}),
       startCollapsed:
