@@ -1607,28 +1607,6 @@
         "default": "Close"
       },
       {
-        "label": "Game label",
-        "importance": "low",
-        "name": "label",
-        "type": "text",
-        "default": "Memory Game. Find the matching cards."
-      },
-      {
-        "label": "Game instructions",
-        "importance": "low",
-        "name": "labelInstructions",
-        "type": "text",
-        "default": "Use arrow keys left and right to navigate cards. Use space or enter key to turn card."
-      },
-      {
-        "label": "Game finished label",
-        "importance": "low",
-        "name": "done",
-        "type": "text",
-        "default": "All of the cards have been found.",
-        "description": "Shown under the status bar when the player finds all pairs (retry dialog)."
-      },
-      {
         "label": "Card indexing label",
         "description": "%num and %total are placeholders and will be replaced with the respective values for the card.",
         "importance": "low",

@@ -184,9 +184,6 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
         failedTurns: 'No more card turns left.',
         tryAgain: 'Reset',
         closeLabel: 'Close',
-        label: 'Memory Game. Find the matching cards.',
-        labelInstructions: 'Use arrow keys left and right to navigate cards. Use space or enter key to turn card.',
-        done: 'All of the cards have been found.',
         cardPrefix: 'Card %num of %total:',
         cardUnturned: 'Unturned. Click to turn.',
         cardTurned: 'Turned.',
@@ -278,9 +275,6 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
           imgs.push(mate.getImage());
         }
 
-        // Keep message for dialog modal shorter without instructions
-        $applicationLabel.html(parameters.l10n.label);
-
         popup.show(desc, imgs, cardStyles ? cardStyles.back : undefined, function (refocus) {
           if (isFinished) {
             // Game done
@@ -321,18 +315,23 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       });
       self.retryButton.style.fontSize = (parseFloat(($playArea && $playArea.length ? $playArea : $wrapper).children('ul')[0].style.fontSize) * 0.75) + 'px';
 
-      var descriptionId = 'h5p-memory-end-message-' + numInstances;
       const retryModal = document.createElement('div');
       retryModal.className = 'h5p-memory-retry-dialog';
       retryModal.setAttribute('role', 'dialog');
       retryModal.setAttribute('aria-modal', 'true');
-      retryModal.setAttribute('aria-describedby', descriptionId);
       retryModal.setAttribute('tabindex', -1);
-      const status = document.createElement('div');
-      status.className = 'h5p-memory-end-message';
-      status.setAttribute('id', descriptionId);
-      status.innerText = statusText.replace(/\n/g, ' ');
-      retryModal.appendChild(status);
+
+      var trimmedStatus = (statusText || '').replace(/\n/g, ' ').trim();
+      if (trimmedStatus) {
+        var descriptionId = 'h5p-memory-end-message-' + numInstances;
+        const status = document.createElement('div');
+        status.className = 'h5p-memory-end-message';
+        status.setAttribute('id', descriptionId);
+        status.innerText = trimmedStatus;
+        retryModal.setAttribute('aria-describedby', descriptionId);
+        retryModal.appendChild(status);
+      }
+
       retryModal.appendChild(self.retryButton);
 
       $bottom[0].appendChild(retryModal);
@@ -392,8 +391,8 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
 
       lockCards();
 
-      // Feedback banner + editable "done" message in the retry dialog
-      appendRetryDialog(parameters.l10n.done || '');
+      // Feedback banner + retry dialog (sin mensaje "done")
+      appendRetryDialog('');
       $feedback.addClass('h5p-show');
       scheduleLayoutAfterGameEnd();
 
@@ -833,8 +832,7 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
 
     // Build DOM elements to be attached later
     var $list = $('<ul/>', {
-      role: 'application',
-      'aria-labelledby': 'h5p-intro-' + numInstances
+      role: 'application'
     });
 
     for (var i = 0; i < cards.length; i++) {
@@ -844,12 +842,6 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
     if (cards.length) {
       // Make first available card tabbable
       cards.filter((card) => !card.isRemoved())[0]?.makeTabbable();
-
-      $applicationLabel = $('<div/>', {
-        id: 'h5p-intro-' + numInstances,
-        'class': 'h5p-memory-hidden-read',
-        html: parameters.l10n.label + ' ' + parameters.l10n.labelInstructions,
-      });
 
       $bottom = $('<div/>', {
         'class': 'h5p-programatically-focusable'
@@ -925,11 +917,6 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
         enableTurnLimit ? maxCardTurns : null
       );
       popup = new MemoryGame.Popup(parameters.l10n);
-
-      popup.on('closed', function () {
-        // Add instructions back
-        $applicationLabel.html(parameters.l10n.label + ' ' + parameters.l10n.labelInstructions);
-      });
 
       // Aria live region to politely read to screen reader
       ariaLiveRegion = new MemoryGame.AriaLiveRegion();
@@ -1157,7 +1144,6 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       }
 
       if (cards.length) {
-        $applicationLabel.appendTo($playArea);
         $list.appendTo($playArea);
         $bottom.appendTo($playArea);
         popup.appendTo($playArea);
