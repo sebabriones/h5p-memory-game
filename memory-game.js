@@ -192,7 +192,8 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
         cardTurned: 'Turned.',
         cardMatched: 'Match found.',
         cardMatchedA11y: 'Your cards match!',
-        cardNotMatchedA11y: 'Your chosen cards do not match. Turn other cards to try again.'
+        cardNotMatchedA11y: 'Your chosen cards do not match. Turn other cards to try again.',
+        pairNumber: 'Pair %num'
       }
     }, parameters);
 
@@ -750,18 +751,20 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
     // Create cards pool
     let cardsPool = parameters.cards
       .reduce((result, cardParams, index) => {
+        const pairHighlightColor = cardParams.matchHighlightColor || '#d0d0d0';
+        const pairNumber = index + 1;
         // Create first card
-        const cardOne = new MemoryGame.Card(cardParams.image, id, 2 * numCardsToUse, cardParams.imageAlt, parameters.l10n, cardParams.description, cardStyles, cardParams.audio, `${index}-1`);
+        const cardOne = new MemoryGame.Card(cardParams.image, id, 2 * numCardsToUse, cardParams.imageAlt, parameters.l10n, cardParams.description, cardStyles, cardParams.audio, `${index}-1`, pairHighlightColor, pairNumber);
         let cardTwo;
 
         if (MemoryGame.Card.hasTwoImages(cardParams)) {
           // Use matching image for card two
-          cardTwo = new MemoryGame.Card(cardParams.match, id, 2 * numCardsToUse, cardParams.matchAlt, parameters.l10n, cardParams.description, cardStyles, cardParams.matchAudio, `${index}-2`);
+          cardTwo = new MemoryGame.Card(cardParams.match, id, 2 * numCardsToUse, cardParams.matchAlt, parameters.l10n, cardParams.description, cardStyles, cardParams.matchAudio, `${index}-2`, pairHighlightColor, pairNumber);
           cardOne.hasTwoImages = cardTwo.hasTwoImages = true;
         }
         else {
           // Add two cards with the same image
-          cardTwo = new MemoryGame.Card(cardParams.image, id, 2 * numCardsToUse, cardParams.imageAlt, parameters.l10n, cardParams.description, cardStyles, cardParams.audio, `${index}-2`);
+          cardTwo = new MemoryGame.Card(cardParams.image, id, 2 * numCardsToUse, cardParams.imageAlt, parameters.l10n, cardParams.description, cardStyles, cardParams.audio, `${index}-2`, pairHighlightColor, pairNumber);
         }
 
         return [...result, cardOne, cardTwo];
@@ -1029,17 +1032,25 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       setVar('--h5p-mg-feedback-color', resolveColor(look.feedbackColor, '#333333'));
       setVar('--h5p-mg-feedback-failed-color', resolveColor(look.feedbackFailedColor, '#b00020'));
 
-      var radius = Number(look.cardBorderRadius);
-      if (isNaN(radius)) {
-        radius = 4;
-      }
-      setVar('--h5p-mg-card-radius', Math.max(0, radius) + 'px');
+      // Editor stores px at the 16px design size; convert to em so borders track card scaling.
+      var pxToEm = function (raw, fallbackPx, maxPx) {
+        var value = Number(raw);
+        if (isNaN(value)) {
+          value = fallbackPx;
+        }
+        // Brief em-era content (0.125–2.5) → treat as already-em and map back via *16.
+        if (value > 0 && value <= 2.5 && String(raw).indexOf('.') !== -1) {
+          value = value * 16;
+        }
+        value = Math.max(0, Math.min(maxPx, value));
+        return value / 16;
+      };
 
-      var borderWidth = Number(look.cardBorderWidth);
-      if (isNaN(borderWidth)) {
-        borderWidth = 2;
-      }
-      setVar('--h5p-mg-card-border-width', Math.max(0, borderWidth) + 'px');
+      var radius = pxToEm(look.cardBorderRadius, 4, 40);
+      setVar('--h5p-mg-card-radius', radius + 'em');
+
+      var borderWidth = pxToEm(look.cardBorderWidth, 2, 24);
+      setVar('--h5p-mg-card-border-width', borderWidth + 'em');
       setVar('--h5p-mg-card-border-color', resolveColor(look.cardBorderColor, '#d0d0d0'));
 
       var matchedOpacity = Number(look.matchedOpacity);
@@ -1052,6 +1063,26 @@ H5P.MemoryGameCFRD = (function (EventDispatcher, $) {
       }
       matchedOpacity = Math.max(0, Math.min(1, matchedOpacity));
       setVar('--h5p-mg-matched-opacity', String(matchedOpacity));
+
+      var matchedBorderWidthPx = Number(look.matchedBorderWidth);
+      if (isNaN(matchedBorderWidthPx)) {
+        matchedBorderWidthPx = Number(look.cardBorderWidth);
+      }
+      if (isNaN(matchedBorderWidthPx)) {
+        matchedBorderWidthPx = 2;
+      }
+      var matchedBorderWidth = pxToEm(matchedBorderWidthPx, 2, 24);
+      setVar('--h5p-mg-matched-border-width', matchedBorderWidth + 'em');
+
+      var matchedBorderRadiusPx = Number(look.matchedBorderRadius);
+      if (isNaN(matchedBorderRadiusPx)) {
+        matchedBorderRadiusPx = Number(look.cardBorderRadius);
+      }
+      if (isNaN(matchedBorderRadiusPx)) {
+        matchedBorderRadiusPx = 4;
+      }
+      var matchedBorderRadius = pxToEm(matchedBorderRadiusPx, 4, 40);
+      setVar('--h5p-mg-matched-border-radius', matchedBorderRadius + 'em');
 
       var flipMs = Number(look.flipDurationMs);
       if (isNaN(flipMs)) {

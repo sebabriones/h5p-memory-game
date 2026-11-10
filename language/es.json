@@ -367,6 +367,10 @@
           {
             "label": "Descripción",
             "description": "Un breve texto opcional que aparecerá cuando se encuentren las dos cartas coincidentes."
+          },
+          {
+            "label": "Color del borde de la pareja encontrada",
+            "description": "Color del borde aplicado a ambas cartas de este par cuando se encuentran. El valor por defecto coincide con el color de borde de las cartas del juego."
           }
         ]
       }
@@ -440,11 +444,11 @@
         },
         {
           "label": "Radio del borde de las cartas",
-          "description": "Redondez de las esquinas de las cartas, en píxeles."
+          "description": "Redondez de las esquinas de las cartas, en píxeles del tamaño de diseño. El reproductor lo convierte a em para que escale con el área de juego."
         },
         {
           "label": "Grosor del borde de las cartas",
-          "description": "Grosor del borde de las cartas, en píxeles."
+          "description": "Grosor del borde de las cartas, en píxeles del tamaño de diseño. El reproductor lo convierte a em para que escale con el área de juego."
         },
         {
           "label": "Color del borde de las cartas",
@@ -453,6 +457,14 @@
         {
           "label": "Opacidad de cartas emparejadas",
           "description": "Opacidad de las cartas tras encontrar un par, en porcentaje (0 = invisible, 100 = opaco)."
+        },
+        {
+          "label": "Grosor del borde de parejas encontradas",
+          "description": "Grosor del borde tras encontrar un par, en píxeles del tamaño de diseño (se convierte a em en el reproductor). Aplica a todas las parejas; el color se define por carta."
+        },
+        {
+          "label": "Radio del borde de parejas encontradas",
+          "description": "Redondez de las esquinas tras encontrar un par, en píxeles del tamaño de diseño (se convierte a em en el reproductor). Aplica a todas las parejas."
         },
         {
           "label": "Símbolo del frente de la carta",
@@ -607,6 +619,11 @@
         {
           "label": "Anuncio tarjeta no coincide",
           "default": "Sus tarjetas elegidas no coinciden. Voltee otras tarjetas o inténtelo de nuevo."
+        },
+        {
+          "label": "Etiqueta de número de pareja",
+          "default": "Pareja %num",
+          "description": "Se anuncia al encontrar un par. %num es el orden de la carta en la lista Cards (1, 2, 3…)."
         }
       ]
     }

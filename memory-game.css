@@ -112,11 +112,11 @@
   background: #cfcfcf;
   background-size: cover;
   border-style: solid;
-  border-width: var(--h5p-mg-card-border-width, 2px);
+  border-width: var(--h5p-mg-card-border-width, 0.125em);
   border-color: var(--h5p-mg-card-border-color, #d0d0d0);
   box-sizing: border-box;
   -moz-box-sizing: border-box;
-  border-radius: var(--h5p-mg-card-radius, 4px);
+  border-radius: var(--h5p-mg-card-radius, 0.25em);
   -webkit-backface-visibility: hidden;
   -moz-backface-visibility: hidden;
   backface-visibility: hidden;
@@ -198,10 +198,40 @@
   -ms-transform: scale(0,1.1);
 }
 .h5p-memory-game-cfrd .h5p-memory-card.h5p-matched {
+  position: relative;
+}
+/* Fade faces only so the pair-number badge stays fully readable. */
+.h5p-memory-game-cfrd .h5p-memory-card.h5p-matched .h5p-front,
+.h5p-memory-game-cfrd .h5p-memory-card.h5p-matched .h5p-back {
   opacity: var(--h5p-mg-matched-opacity, 0.3);
+  border-color: var(--h5p-mg-match-highlight, var(--h5p-mg-card-border-color, #d0d0d0));
+  border-width: var(--h5p-mg-matched-border-width, var(--h5p-mg-card-border-width, 0.125em));
+  border-radius: var(--h5p-mg-matched-border-radius, var(--h5p-mg-card-radius, 0.25em));
 }
 .h5p-memory-game-cfrd .h5p-memory-card.h5p-matched img {
   filter: grayscale(100%);
+}
+.h5p-memory-game-cfrd .h5p-memory-card .h5p-memory-pair-badge {
+  position: absolute;
+  top: 0.2em;
+  right: 0.2em;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35em;
+  height: 1.35em;
+  padding: 0 0.25em;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #111111;
+  color: #ffffff;
+  font-size: 0.72em;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 1;
+  pointer-events: none;
+  box-shadow: 0 0 0 0.08em rgba(255, 255, 255, 0.9);
 }
 
 .h5p-memory-game-cfrd .h5p-feedback {

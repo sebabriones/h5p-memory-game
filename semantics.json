@@ -1014,6 +1014,19 @@
           "maxLength": 150,
           "optional": true,
           "description": "An optional short text that will pop up once the two matching cards are found."
+        },
+        {
+          "name": "matchHighlightColor",
+          "type": "text",
+          "label": "Matched pair border color",
+          "importance": "low",
+          "description": "Border color applied to both cards of this pair when they are found. Default matches the game card border color.",
+          "optional": true,
+          "default": "#d0d0d0",
+          "widget": "colorSelector",
+          "spectrum": {
+            "showInput": true
+          }
         }
       ]
     }
@@ -1196,7 +1209,7 @@
         "type": "number",
         "label": "Card border radius",
         "importance": "low",
-        "description": "Corner roundness of the cards, in pixels.",
+        "description": "Corner roundness of the cards, in pixels at the default design size. The player converts this to em so it scales with the play area.",
         "optional": true,
         "default": 4,
         "min": 0,
@@ -1209,11 +1222,11 @@
         "type": "number",
         "label": "Card border width",
         "importance": "low",
-        "description": "Border thickness of the cards, in pixels.",
+        "description": "Border thickness of the cards, in pixels at the default design size. The player converts this to em so it scales with the play area.",
         "optional": true,
         "default": 2,
         "min": 0,
-        "max": 12,
+        "max": 24,
         "step": 1,
         "unit": "px"
       },
@@ -1242,6 +1255,32 @@
         "max": 100,
         "step": 1,
         "unit": "%"
+      },
+      {
+        "name": "matchedBorderWidth",
+        "type": "number",
+        "label": "Matched pair border width",
+        "importance": "low",
+        "description": "Border thickness after a pair is found, in pixels at the default design size (converted to em in the player). Applies to all matched pairs; pair color is set per card.",
+        "optional": true,
+        "default": 2,
+        "min": 0,
+        "max": 24,
+        "step": 1,
+        "unit": "px"
+      },
+      {
+        "name": "matchedBorderRadius",
+        "type": "number",
+        "label": "Matched pair border radius",
+        "importance": "low",
+        "description": "Corner roundness after a pair is found, in pixels at the default design size (converted to em in the player). Applies to all matched pairs.",
+        "optional": true,
+        "default": 4,
+        "min": 0,
+        "max": 40,
+        "step": 1,
+        "unit": "px"
       },
       {
         "name": "cardFrontSymbol",
@@ -1631,6 +1670,14 @@
         "name": "cardNotMatchedA11y",
         "type": "text",
         "default": "Your chosen cards do not match. Turn other cards to try again."
+      },
+      {
+        "label": "Pair number label",
+        "importance": "low",
+        "name": "pairNumber",
+        "type": "text",
+        "default": "Pair %num",
+        "description": "Announced when a pair is found. %num is replaced with the pair order from the Cards list (1, 2, 3…)."
       }
     ]
   }

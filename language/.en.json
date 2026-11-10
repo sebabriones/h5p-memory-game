@@ -413,6 +413,10 @@
           {
             "label": "Description",
             "description": "An optional short text that will pop up once the two matching cards are found."
+          },
+          {
+            "label": "Matched pair border color",
+            "description": "Border color applied to both cards of this pair when they are found. Default matches the game card border color."
           }
         ]
       }
@@ -486,11 +490,11 @@
         },
         {
           "label": "Card border radius",
-          "description": "Corner roundness of the cards, in pixels."
+          "description": "Corner roundness of the cards, in pixels at the default design size. The player converts this to em so it scales with the play area."
         },
         {
           "label": "Card border width",
-          "description": "Border thickness of the cards, in pixels."
+          "description": "Border thickness of the cards, in pixels at the default design size. The player converts this to em so it scales with the play area."
         },
         {
           "label": "Card border color",
@@ -499,6 +503,14 @@
         {
           "label": "Matched card opacity",
           "description": "Opacity of cards after a pair is found, as a percentage (0 = invisible, 100 = fully opaque)."
+        },
+        {
+          "label": "Matched pair border width",
+          "description": "Border thickness after a pair is found, in pixels at the default design size (converted to em in the player). Applies to all matched pairs; pair color is set per card."
+        },
+        {
+          "label": "Matched pair border radius",
+          "description": "Corner roundness after a pair is found, in pixels at the default design size (converted to em in the player). Applies to all matched pairs."
         },
         {
           "label": "Card front symbol",
@@ -653,6 +665,11 @@
         {
           "label": "Card not matched announcement",
           "default": "Your chosen cards do not match. Turn other cards to try again."
+        },
+        {
+          "label": "Pair number label",
+          "default": "Pair %num",
+          "description": "Announced when a pair is found. %num is replaced with the pair order from the Cards list (1, 2, 3…)."
         }
       ]
     }

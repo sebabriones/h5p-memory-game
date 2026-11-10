@@ -20,12 +20,21 @@
    * @param {string} [description]
    * @param {Object} [styles]
    * @param {string} id Unique identifier for card including original+match info.
+   * @param {string} [matchHighlightColor] Border color when this pair is found.
+   * @param {number} [pairNumber] 1-based pair index from Cards list order.
    */
-  MemoryGame.Card = function (image, contentId, cardsTotal, alt, l10n, description, styles, audio, id) {
+  MemoryGame.Card = function (image, contentId, cardsTotal, alt, l10n, description, styles, audio, id, matchHighlightColor, pairNumber) {
     /** @alias H5P.MemoryGameCFRD.Card# */
     var self = this;
 
     this.id = id;
+    var pairHighlightColor = (typeof matchHighlightColor === 'string' && matchHighlightColor.trim())
+      ? matchHighlightColor.trim()
+      : '#d0d0d0';
+    var pairIndexFromId = parseInt(String(id || '').split('-')[0], 10);
+    var pairNum = (typeof pairNumber === 'number' && pairNumber > 0)
+      ? Math.floor(pairNumber)
+      : (isNaN(pairIndexFromId) ? 0 : pairIndexFromId + 1);
 
     // Keep track of tabbable state
     self.isTabbable = false;
@@ -220,7 +229,8 @@
         `${l10n.cardTurned}${imageAlt}`;
 
       if (isMatched) {
-        label = l10n.cardMatched + ' ' + label;
+        var pairLabel = (l10n.pairNumber || 'Pair %num').replace('%num', String(pairNum || ''));
+        label = l10n.cardMatched + ' ' + pairLabel + '. ' + label;
       }
 
       // Update the card's label
@@ -279,10 +289,23 @@
     };
 
     /**
-     * Remove.
+     * Remove (mark as matched pair).
      */
     self.remove = function () {
       $card.addClass('h5p-matched');
+      if ($card[0] && $card[0].style) {
+        $card[0].style.setProperty('--h5p-mg-match-highlight', pairHighlightColor);
+      }
+      // Override theme inline border so the pair color is visible.
+      $card.children('.h5p-front, .h5p-back').css('border-color', pairHighlightColor);
+
+      // Accessible pair marker: number from Cards list order (1-based).
+      $card.children('.h5p-memory-pair-badge').remove();
+      if (pairNum > 0) {
+        $('<span class="h5p-memory-pair-badge" aria-hidden="true"></span>')
+          .text(String(pairNum))
+          .appendTo($card);
+      }
       removedState = true;
     };
 
@@ -295,6 +318,11 @@
       flippedState = false;
       removedState = false;
       $card[0].classList.remove('h5p-flipped', 'h5p-matched');
+      if ($card[0] && $card[0].style) {
+        $card[0].style.removeProperty('--h5p-mg-match-highlight');
+      }
+      $card.children('.h5p-front, .h5p-back').css('border-color', '');
+      $card.children('.h5p-memory-pair-badge').remove();
     };
 
     /**
